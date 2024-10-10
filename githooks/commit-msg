@@ -1,0 +1,31 @@
+
+#!/bin/bash
+
+# Read the commit message from the first argument
+msg=$(< $1)
+
+# Function to check if the commit message is a conventional commit
+is_conventional_commit() {
+    # Define the list of selected words
+    conventional_commit_keywords=("build" "chore" "ci" "docs" "feat" "fix" "perf" "refactor" "style" "test")
+
+    # Extract the first word from the sentence
+    first_word=$(echo $msg | awk '{print $1}')
+
+    for first_word in "${conventional_commit_keywords[@]}"
+    do
+        if [[ $msg == *$first_word* ]]; then
+            return 0  
+        fi
+    done
+    return 1  
+}
+
+# Check if the commit message is a conventional commit
+if is_conventional_commit; then
+    exit 0
+else
+    echo "Commit message must start with one of the following words: ${conventional_commit_keywords[@]}"
+    exit 1
+fi
+

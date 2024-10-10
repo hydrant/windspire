@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Run dotnet build to check for errors
+dotnet build
+
+# Check the exit code of dotnet build
+if [ $? -ne 0 ]; then
+    echo "Error: Build failed. Please fix the errors before pushing."
+    exit 1
+fi
+
+# Run tests using dotnet test
+dotnet test
+
+# Check the exit code of dotnet test
+if [ $? -ne 0 ]; then
+    echo "Error: Tests failed. Please fix the failing tests before pushing."
+    exit 1
+fi
+
+echo "All tests passed. Proceeding with push."
+exit 0
