@@ -1,13 +1,14 @@
 use axum::{routing::get, Router};
 use dotenvy::dotenv;
-use presentation::user_handler::get_users;
+use presentation::user_handler::{get_all_users_handler, get_users};
 use std::env;
 use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
 
+mod presentation;
+mod application;
 mod domain;
 mod infrastructure;
-mod presentation;
 
 #[tokio::main]
 async fn main() -> () {
@@ -45,6 +46,7 @@ async fn main() -> () {
     let app = Router::new()
         .route("/", get(|| async { "Hello World!" }))
         .route("/users", get(get_users))
+        .route("/loosers", get(get_all_users_handler))
         .with_state(db_pool);
 
     axum::serve(listener, app)

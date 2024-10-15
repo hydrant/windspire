@@ -1,10 +1,14 @@
+use crate::domain::usecase::UseCase;
 use crate::infrastructure::user_repository;
+use axum::Json;
 use axum::{extract::State, http::{header, StatusCode}, response::IntoResponse};
 use serde_json::json;
 use sqlx::PgPool;
 use tracing::debug;
 
-pub async fn get_users(State(pg_pool): State<PgPool>) -> impl IntoResponse {
+pub async fn get_users(
+    State(pg_pool): State<PgPool>
+) -> impl IntoResponse {
     debug!("get_users...");
     match user_repository::get_users(&pg_pool).await {
         Ok(users) => (
@@ -18,4 +22,14 @@ pub async fn get_users(State(pg_pool): State<PgPool>) -> impl IntoResponse {
             json!({ "success" : false, "message" : e.to_string() }).to_string(),
         ),
     }
+}
+
+// Axum handler with shared state (like a database pool)
+pub async fn get_all_users_handler(
+    State(_pool): State<PgPool>, // Arc<PgPool> is passed here
+) -> impl IntoResponse {
+    let use_case = crate::application::usecase::get_all_users_usecase::GetAllUsersUseCase;
+    let response = use_case.execute();
+    // Here, you could use the `pool` to fetch real data from the DB
+    Json(response)
 }
