@@ -11,6 +11,8 @@ mod presentation;
 
 #[tokio::main]
 async fn main() -> () {
+    // Initialize tracing
+    tracing_subscriber::fmt::init();
 
     dotenv().expect("Unable to access .env file");
 

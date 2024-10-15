@@ -1,0 +1,11 @@
+{
+    "recommendations": [
+        "vadimcn.vscode-lldb",
+        "fill-labs.dependi",
+        "usernamehw.errorlens",
+        "tamasfe.even-better-toml",
+        "gruntfuggly.todo-tree",
+        "rust-lang.rust-analyzer",
+        "dineug.vuerd-vscode"
+    ]
+}
