@@ -1,0 +1,19 @@
+
+### Getting all users
+GET http://localhost:8080/users
+
+
+
+### Create new user
+
+POST http://localhost:8080/users
+Content-Type: application/json
+
+{
+    "id": "46d29cc6-a944-4a51-a554-0b9b9800f6fe",
+    "first_name": "Ole",
+    "last_name": "Olsen",
+    "email": "ole@olsen.org",
+    "phone": "12345678",
+    "country_id": "ddba3f2c-3c65-47e6-a15b-ae9a246e8fad"
+}

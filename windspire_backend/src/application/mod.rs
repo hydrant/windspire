@@ -1,1 +1,2 @@
-pub mod usecase;
+pub mod commands;
+pub mod queries;

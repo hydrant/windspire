@@ -1,2 +1,2 @@
 pub mod models;
-pub mod usecase;
+pub mod user_repository;

@@ -1,11 +1,15 @@
-use axum::{routing::get, Router};
+use application::{
+    commands::insert_user_command::insert_user_command, queries::get_users_query::get_users_query,
+};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 use dotenvy::dotenv;
-use presentation::user_handler::{get_all_users_handler, get_users};
-use std::env;
 use sqlx::postgres::PgPoolOptions;
+use std::env;
 use tokio::net::TcpListener;
 
-mod presentation;
 mod application;
 mod domain;
 mod infrastructure;
@@ -23,8 +27,8 @@ async fn main() -> () {
         env::var("DATABASE_URL").expect("Unable to read DATABASE_URL environment variable");
     println!("DATABASE_URL: {}", database_url);
 
-        // Create database connections pool
-        let db_pool = PgPoolOptions::new()
+    // Create database connections pool
+    let db_pool = PgPoolOptions::new()
         .max_connections(16)
         .connect(&database_url)
         .await
@@ -45,14 +49,11 @@ async fn main() -> () {
 
     let app = Router::new()
         .route("/", get(|| async { "Hello World!" }))
-        .route("/users", get(get_users))
-        .route("/loosers", get(get_all_users_handler))
+        .route("/users", get(get_users_query))
+        .route("/users", post(insert_user_command))
         .with_state(db_pool);
 
     axum::serve(listener, app)
         .await
         .expect("Error serving application");
-
 }
-
-
