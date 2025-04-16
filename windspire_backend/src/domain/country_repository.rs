@@ -9,7 +9,7 @@ pub(crate) trait CountryRepository {
     fn get_country_by_id(
         &self,
         pool: &PgPool,
-        user_id: Uuid,
+        country_id: Uuid,
     ) -> impl std::future::Future<Output = Result<Country, Error>>;
 
     fn get_countries(
@@ -20,6 +20,6 @@ pub(crate) trait CountryRepository {
     fn insert_country(
         &self,
         conn: &PgPool,
-        user: CountryCreate,
+        country: CountryCreate,
     ) -> impl std::future::Future<Output = Result<Country, Error>>;
 }

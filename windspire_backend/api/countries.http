@@ -1,2 +1,6 @@
 ### Getting all countries
 GET http://localhost:8080/countries
+
+### Getting country by ID
+@country_id=ddba3f2c-3c65-47e6-a15b-ae9a246e8fad
+GET http://localhost:8080/countries/{{country_id}}
