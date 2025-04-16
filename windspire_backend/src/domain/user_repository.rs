@@ -20,5 +20,5 @@ pub(crate) trait UserRepository {
         &self,
         conn: &PgPool,
         user: UserCreate,
-    ) -> impl std::future::Future<Output = Result<(), Error>>;
+    ) -> impl std::future::Future<Output = Result<User, Error>>;
 }

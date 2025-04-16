@@ -10,9 +10,9 @@ POST http://localhost:8080/users
 Content-Type: application/json
 
 {
-    "first_name": "Ove",
+    "first_name": "Håkon",
     "last_name": "Størholt",
-    "email": "ovestoerholt@gmail.com",
-    "phone": "93021759",
+    "email": "hakonstoerholt@gmail.com",
+    "phone": "93811817",
     "country_id": "ddba3f2c-3c65-47e6-a15b-ae9a246e8fad"
 }

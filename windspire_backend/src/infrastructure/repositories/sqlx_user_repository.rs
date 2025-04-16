@@ -50,25 +50,22 @@ impl UserRepository for SqlxUserRepository {
         Ok(users)
     }
 
-    async fn insert_user(&self, conn: &PgPool, user: UserCreate) -> Result<(), sqlx::Error> {
+    async fn insert_user(&self, conn: &PgPool, user_create: UserCreate) -> Result<User, sqlx::Error> {
         // Generate UUID v7 id
         let ts = Timestamp::now(&NoContext);
         let id = Uuid::new_v7(ts);
-        let insert_user_q = r#"
-        INSERT INTO users (id, first_name, last_name, email, phone, country_id)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        "#;
+        let user = sqlx::query_as!(
+            User,
+            r#"
+            INSERT INTO users (id, first_name, last_name, email, phone, country_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, first_name, last_name, email, phone, country_id
+            "#,
+            id, user_create.first_name, user_create.last_name, user_create.email, user_create.phone, user_create.country_id
+        )
+        .fetch_one(conn)
+        .await?;
 
-        sqlx::query(insert_user_q)
-            .bind(&id)
-            .bind(&user.first_name)
-            .bind(&user.last_name)
-            .bind(&user.email)
-            .bind(&user.phone.as_deref())
-            .bind(&user.country_id)
-            .execute(conn) // Pass conn directly, no need to dereference
-            .await?;
-
-        Ok(())
+    Ok(user)
     }
 }
