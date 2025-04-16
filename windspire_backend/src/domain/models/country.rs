@@ -8,3 +8,10 @@ pub struct Country {
     pub iso_alpha_2: String,
     pub iso_alpha_3: String,
 }
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct CountryCreate {
+    pub iso_name: String,
+    pub iso_alpha_2: String,
+    pub iso_alpha_3: String,
+}

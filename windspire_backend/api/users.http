@@ -16,3 +16,7 @@ Content-Type: application/json
     "phone": "93811817",
     "country_id": "ddba3f2c-3c65-47e6-a15b-ae9a246e8fad"
 }
+
+
+### Get all users
+GET http://localhost:8080/users
