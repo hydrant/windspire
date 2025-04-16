@@ -2,6 +2,10 @@
 ### Getting all users
 GET http://localhost:8080/users
 
+### Getting user by ID
+@user_id = 01964081-4fbf-747a-ae64-d17030fc3dcc
+GET http://localhost:8080/users/{{user_id}}
+
 
 
 ### Create new user
