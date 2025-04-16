@@ -2,7 +2,8 @@ use anyhow::Result;
 use sqlx::{Error, PgPool};
 use uuid::Uuid;
 
-use super::models::country::{Country, CountryCreate};
+use crate::domain::models::country::{Country, CountryCreate};
+
 
 
 pub(crate) trait CountryRepository {

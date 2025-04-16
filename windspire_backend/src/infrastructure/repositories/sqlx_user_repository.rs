@@ -2,7 +2,7 @@ use anyhow::Result;
 use sqlx::{Error, PgPool};
 use uuid::{NoContext, Timestamp, Uuid};
 
-use crate::domain::{models::user::{User, UserCreate}, user_repository::UserRepository};
+use crate::domain::{models::user::{User, UserCreate}, interface::user_repository::UserRepository};
 
 
 pub struct SqlxUserRepository;

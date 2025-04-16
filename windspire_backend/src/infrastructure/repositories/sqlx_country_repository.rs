@@ -2,7 +2,7 @@ use anyhow::Result;
 use sqlx::{Error, PgPool};
 use uuid::Uuid;
 
-use crate::domain::{country_repository::CountryRepository, models::country::Country};
+use crate::domain::{interface::country_repository::CountryRepository, models::country::Country};
 
 pub struct SqlxCountryRepository;
 

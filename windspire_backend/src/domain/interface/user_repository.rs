@@ -2,7 +2,8 @@ use anyhow::Result;
 use sqlx::{Error, PgPool};
 use uuid::Uuid;
 
-use super::models::user::{User, UserCreate};
+use crate::domain::models::user::{User, UserCreate};
+
 
 pub(crate) trait UserRepository {
     fn get_user_by_id(

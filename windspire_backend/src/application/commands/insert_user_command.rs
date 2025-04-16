@@ -1,11 +1,7 @@
 use axum::{extract::{Json, State}, http::{header, StatusCode}, response::IntoResponse};
 use serde_json::json;
 use sqlx::PgPool;
-
-use crate::{
-    domain::{models::user::UserCreate, user_repository::UserRepository},
-    infrastructure::repositories::sqlx_user_repository::SqlxUserRepository,
-};
+use crate::{domain::{interface::user_repository::UserRepository, models::user::UserCreate}, infrastructure::repositories::sqlx_user_repository::SqlxUserRepository};
 
 
 pub async fn insert_user_command(

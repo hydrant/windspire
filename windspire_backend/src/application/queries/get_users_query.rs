@@ -7,7 +7,7 @@ use serde_json::json;
 use sqlx::PgPool;
 
 use crate::{
-    domain::user_repository::UserRepository,
+    domain::interface::user_repository::UserRepository,
     infrastructure::repositories::sqlx_user_repository::SqlxUserRepository,
 };
 
