@@ -1,10 +1,4 @@
-use application::{
-    commands::insert_user_command::insert_user_command, queries::{get_countries_query::get_countries_query, get_users_query::get_users_query},
-};
-use axum::{
-    Router,
-    routing::{get, post},
-};
+use application::approuter;
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use std::env;
@@ -47,12 +41,7 @@ async fn main() -> () {
 
     println!("Listening on {}", listener.local_addr().unwrap());
 
-    let app = Router::new()
-        .route("/", get(|| async { "Hello World!" }))
-        .route("/users", get(get_users_query))
-        .route("/users", post(insert_user_command))
-        .route("/countries", get(get_countries_query))
-        .with_state(db_pool);
+    let app = approuter::create_router(db_pool);
 
     axum::serve(listener, app)
         .await
