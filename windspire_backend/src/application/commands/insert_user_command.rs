@@ -3,14 +3,14 @@ use serde_json::json;
 use sqlx::PgPool;
 
 use crate::{
-    domain::{models::user::User, user_repository::UserRepository},
+    domain::{models::user::UserCreate, user_repository::UserRepository},
     infrastructure::repositories::sqlx_user_repository::SqlxUserRepository,
 };
 
 
 pub async fn insert_user_command(
     State(pg_pool): State<PgPool>,
-    Json(user): Json<User>,
+    Json(user): Json<UserCreate>,
 ) -> impl IntoResponse {
     let repository = SqlxUserRepository;
     match repository.insert_user(&pg_pool, user).await {

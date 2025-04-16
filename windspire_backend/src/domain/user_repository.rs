@@ -2,7 +2,7 @@ use anyhow::Result;
 use sqlx::{Error, PgPool};
 use uuid::Uuid;
 
-use super::models::user::User;
+use super::models::user::{User, UserCreate};
 
 pub(crate) trait UserRepository {
     fn get_user_by_id(
@@ -19,6 +19,6 @@ pub(crate) trait UserRepository {
     fn insert_user(
         &self,
         conn: &PgPool,
-        user: User,
+        user: UserCreate,
     ) -> impl std::future::Future<Output = Result<(), Error>>;
 }

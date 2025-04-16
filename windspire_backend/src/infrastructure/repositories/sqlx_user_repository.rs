@@ -2,7 +2,8 @@ use anyhow::Result;
 use sqlx::{Error, PgPool};
 use uuid::Uuid;
 
-use crate::domain::{models::user::User, user_repository::UserRepository};
+use crate::domain::{models::user::{User, UserCreate}, user_repository::UserRepository};
+
 
 pub struct SqlxUserRepository;
 
@@ -49,7 +50,7 @@ impl UserRepository for SqlxUserRepository {
         Ok(users)
     }
 
-    async fn insert_user(&self, conn: &PgPool, user: User) -> Result<(), sqlx::Error> {
+    async fn insert_user(&self, conn: &PgPool, user: UserCreate) -> Result<(), sqlx::Error> {
         let insert_user_q = r#"
         INSERT INTO users (id, first_name, last_name, email, phone, country_id)
         VALUES (DEFAULT, $1, $2, $3, $4, $5)
@@ -59,7 +60,7 @@ impl UserRepository for SqlxUserRepository {
             .bind(&user.first_name)
             .bind(&user.last_name)
             .bind(&user.email)
-            .bind(&user.phone)
+            .bind(&user.phone.as_deref())
             .bind(&user.country_id)
             .execute(conn) // Pass conn directly, no need to dereference
             .await?;
