@@ -10,7 +10,8 @@ use crate::application::{
 
 use sqlx::PgPool;
 
-use super::queries::get_country_by_id_query::get_country_by_id_query;
+use super::{commands::insert_country_command::insert_country_command, queries::get_country_by_id_query::get_country_by_id_query};
+
 
 pub fn create_router(pool: PgPool) -> Router {
     Router::new()
@@ -18,6 +19,7 @@ pub fn create_router(pool: PgPool) -> Router {
         .route("/users", get(get_users_query))
         .route("/users", post(insert_user_command))
         .route("/countries", get(get_countries_query))
+        .route("/countries", post(insert_country_command))
         .route("/countries/{country_id}", get(get_country_by_id_query))
         .with_state(pool)
 }

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use sqlx::{Error, PgPool};
-use uuid::Uuid;
+use uuid::{NoContext, Timestamp, Uuid};
 
-use crate::domain::{interface::country_repository::CountryRepository, models::country::Country};
+use crate::domain::{interface::country_repository::CountryRepository, models::country::{Country, CountryCreate}};
 
 pub struct SqlxCountryRepository;
 
@@ -48,32 +48,25 @@ impl CountryRepository for SqlxCountryRepository {
     async fn insert_country(
         &self,
         conn: &PgPool,
-        country: crate::domain::models::country::CountryCreate,
+        country_create: CountryCreate,
     ) -> Result<Country, Error> {
-        todo!()
-    }
-}
 
-//pub async fn get_by_id(
-//    pool: &PgPool,
-//    id: Uuid, // Accept the id as a parameter
-//) -> Result<Country, sqlx::Error> {
-//    let country = sqlx::query_as!(
-//        Country,
-//        r#"
-//        SELECT
-//            id,
-//            iso_name,
-//            iso_alpha_2,
-//            iso_alpha_3
-//        FROM countries
-//        WHERE id = $1
-//        "#,
-//        id // Pass the id to the query
-//    )
-//    .fetch_one(pool)
-//    .await?;
-//
-//    Ok(country)
-//}
-//
+        // Generate UUID v7 id
+        let ts = Timestamp::now(&NoContext);
+        let id = Uuid::new_v7(ts);
+        let country = sqlx::query_as!(
+            Country,
+            r#"
+            INSERT INTO countries (id, iso_name, iso_alpha_2, iso_alpha_3)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, iso_name, iso_alpha_2, iso_alpha_3
+            "#,
+            id, country_create.iso_name, country_create.iso_alpha_2, country_create.iso_alpha_3
+        )
+        .fetch_one(conn)
+        .await?;
+
+    Ok(country)
+    }
+
+}
