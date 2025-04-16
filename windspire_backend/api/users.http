@@ -24,3 +24,7 @@ Content-Type: application/json
 
 ### Get all users
 GET http://localhost:8080/users
+
+### Delete user by ID
+@delete_user_id = 01964081-4fbf-747a-ae64-d17030fc3dcc
+DELETE http://localhost:8080/users/{{delete_user_id}}

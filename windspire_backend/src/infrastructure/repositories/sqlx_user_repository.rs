@@ -68,4 +68,18 @@ impl UserRepository for SqlxUserRepository {
 
     Ok(user)
     }
+    
+    async fn delete_user(
+        &self,
+        conn: &PgPool,
+        user_id: Uuid,
+    ) -> Result<(), Error> {
+        let result = sqlx::query!("DELETE FROM users WHERE id = $1", user_id)
+        .execute(conn)
+        .await?;  
+    if result.rows_affected() == 0 {
+        return Err(sqlx::Error::RowNotFound);
+    }  
+        Ok(())
+    }
 }

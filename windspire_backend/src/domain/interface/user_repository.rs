@@ -22,4 +22,10 @@ pub(crate) trait UserRepository {
         conn: &PgPool,
         user: UserCreate,
     ) -> impl std::future::Future<Output = Result<User, Error>>;
+
+    fn delete_user(
+        &self,
+        conn: &PgPool,
+        user_id: Uuid,
+    ) -> impl std::future::Future<Output = Result<(), Error>>;
 }
