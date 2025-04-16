@@ -1,7 +1,7 @@
 -- Create users table
 CREATE TABLE users
 (
-  id         UUID DEFAULT gen_random_uuid() NOT NULL,
+  id         UUID NOT NULL,
   first_name VARCHAR NOT NULL,
   last_name  VARCHAR NOT NULL,
   email      VARCHAR NOT NULL,
@@ -19,8 +19,8 @@ ALTER TABLE users
     REFERENCES countries (id);
 
 -- add users
-INSERT INTO users (first_name, last_name, email, phone, country_id)
-VALUES
-('Ove', 'Størholt', 'ovestoerholt@gmail.com', '93021759', 'ddba3f2c-3c65-47e6-a15b-ae9a246e8fad'),
-('Jan', 'Christensen', 'janchris2000@gmail.com', '41521014', 'ddba3f2c-3c65-47e6-a15b-ae9a246e8fad'),
-('Kalle', 'Anka', 'kalle.anka@disney.se', NULL, '75b559f5-4466-4548-a033-e9dbc8901a57')
+-- INSERT INTO users (first_name, last_name, email, phone, country_id)
+-- VALUES
+-- ('Ove', 'Størholt', 'ovestoerholt@gmail.com', '93021759', 'ddba3f2c-3c65-47e6-a15b-ae9a246e8fad'),
+-- ('Jan', 'Christensen', 'janchris2000@gmail.com', '41521014', 'ddba3f2c-3c65-47e6-a15b-ae9a246e8fad'),
+-- ('Kalle', 'Anka', 'kalle.anka@disney.se', NULL, '75b559f5-4466-4548-a033-e9dbc8901a57')

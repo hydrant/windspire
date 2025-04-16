@@ -1,6 +1,6 @@
 use anyhow::Result;
 use sqlx::{Error, PgPool};
-use uuid::Uuid;
+use uuid::{NoContext, Timestamp, Uuid};
 
 use crate::domain::{models::user::{User, UserCreate}, user_repository::UserRepository};
 
@@ -51,12 +51,16 @@ impl UserRepository for SqlxUserRepository {
     }
 
     async fn insert_user(&self, conn: &PgPool, user: UserCreate) -> Result<(), sqlx::Error> {
+        // Generate UUID v7 id
+        let ts = Timestamp::now(&NoContext);
+        let id = Uuid::new_v7(ts);
         let insert_user_q = r#"
         INSERT INTO users (id, first_name, last_name, email, phone, country_id)
-        VALUES (DEFAULT, $1, $2, $3, $4, $5)
+        VALUES ($1, $2, $3, $4, $5, $6)
         "#;
 
         sqlx::query(insert_user_q)
+            .bind(&id)
             .bind(&user.first_name)
             .bind(&user.last_name)
             .bind(&user.email)
