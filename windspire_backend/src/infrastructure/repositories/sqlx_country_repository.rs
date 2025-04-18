@@ -69,4 +69,19 @@ impl CountryRepository for SqlxCountryRepository {
     Ok(country)
     }
 
+    async fn delete_country(
+        &self,
+        conn: &PgPool,
+        country_id: Uuid,
+    ) -> Result<(), Error> {
+        let result = sqlx::query!("DELETE FROM countries WHERE id = $1", country_id)
+        .execute(conn)
+        .await?;  
+    if result.rows_affected() == 0 {
+        return Err(sqlx::Error::RowNotFound);
+    }  
+        Ok(())
+    }
+
+
 }
