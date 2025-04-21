@@ -1,8 +1,10 @@
-use anyhow::Result;
 use sqlx::{Error, PgPool};
 use uuid::{NoContext, Timestamp, Uuid};
 
-use crate::domain::{interface::country_repository::CountryRepository, models::country::{Country, CountryCreate}};
+use crate::domain::{
+    interface::country_repository::CountryRepository,
+    models::country::{Country, CountryCreate, CountryUpdate},
+};
 
 pub struct SqlxCountryRepository;
 
@@ -50,7 +52,6 @@ impl CountryRepository for SqlxCountryRepository {
         conn: &PgPool,
         country_create: CountryCreate,
     ) -> Result<Country, Error> {
-
         // Generate UUID v7 id
         let ts = Timestamp::now(&NoContext);
         let id = Uuid::new_v7(ts);
@@ -61,27 +62,48 @@ impl CountryRepository for SqlxCountryRepository {
             VALUES ($1, $2, $3, $4)
             RETURNING id, iso_name, iso_alpha_2, iso_alpha_3
             "#,
-            id, country_create.iso_name, country_create.iso_alpha_2, country_create.iso_alpha_3
+            id,
+            country_create.iso_name,
+            country_create.iso_alpha_2,
+            country_create.iso_alpha_3
         )
         .fetch_one(conn)
         .await?;
 
-    Ok(country)
+        Ok(country)
     }
 
-    async fn delete_country(
-        &self,
-        conn: &PgPool,
-        country_id: Uuid,
-    ) -> Result<(), Error> {
+    async fn delete_country(&self, conn: &PgPool, country_id: Uuid) -> Result<(), Error> {
         let result = sqlx::query!("DELETE FROM countries WHERE id = $1", country_id)
-        .execute(conn)
-        .await?;  
-    if result.rows_affected() == 0 {
-        return Err(sqlx::Error::RowNotFound);
-    }  
+            .execute(conn)
+            .await?;
+        if result.rows_affected() == 0 {
+            return Err(sqlx::Error::RowNotFound);
+        }
         Ok(())
     }
 
-
+    async fn update_country(
+        &self,
+        conn: &PgPool,
+        country_id: Uuid,
+        country_update: CountryUpdate,
+    ) -> Result<Country, Error> {
+        let country = sqlx::query_as!(
+            Country,
+            r#"
+            UPDATE countries
+            SET iso_name = $1, iso_alpha_2 = $2, iso_alpha_3 = $3
+            WHERE id = $4
+            RETURNING id, iso_name, iso_alpha_2, iso_alpha_3
+            "#,
+            country_update.iso_name,
+            country_update.iso_alpha_2,
+            country_update.iso_alpha_3,
+            country_id
+        )
+        .fetch_one(conn)
+        .await?;
+        Ok(country)
+    }
 }
