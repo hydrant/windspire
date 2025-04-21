@@ -2,7 +2,7 @@ use anyhow::Result;
 use sqlx::{Error, PgPool};
 use uuid::Uuid;
 
-use crate::domain::models::country::{Country, CountryCreate};
+use crate::domain::models::country::{Country, CountryCreate, CountryUpdate};
 
 
 
@@ -29,5 +29,12 @@ pub(crate) trait CountryRepository {
         conn: &PgPool,
         country_id: Uuid,
     ) -> impl std::future::Future<Output = Result<(), Error>>;
+
+    fn update_country(
+        &self,
+        conn: &PgPool,
+        country_id: Uuid,
+        country_update: CountryUpdate,
+    ) -> impl std::future::Future<Output = Result<Country, Error>>;
 
 }
