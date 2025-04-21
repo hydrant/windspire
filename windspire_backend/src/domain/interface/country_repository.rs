@@ -23,4 +23,11 @@ pub(crate) trait CountryRepository {
         conn: &PgPool,
         country: CountryCreate,
     ) -> impl std::future::Future<Output = Result<Country, Error>>;
+
+    fn delete_country(
+        &self,
+        conn: &PgPool,
+        country_id: Uuid,
+    ) -> impl std::future::Future<Output = Result<(), Error>>;
+
 }

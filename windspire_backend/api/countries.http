@@ -14,3 +14,7 @@ Content-Type: application/json
   "iso_alpha_2" : "FI",
   "iso_alpha_3" : "FIN"
 }
+
+### Delete country by ID
+@delete_country_id = 0196407f-574a-7061-a353-03f612af0766
+DELETE http://localhost:8080/countries/{{delete_country_id}}
