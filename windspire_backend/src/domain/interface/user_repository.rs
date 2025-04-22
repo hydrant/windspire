@@ -2,7 +2,7 @@ use anyhow::Result;
 use sqlx::{Error, PgPool};
 use uuid::Uuid;
 
-use crate::domain::models::user::{User, UserCreate};
+use crate::domain::models::user::{User, UserCreate, UserUpdate};
 
 
 pub(crate) trait UserRepository {
@@ -28,4 +28,12 @@ pub(crate) trait UserRepository {
         conn: &PgPool,
         user_id: Uuid,
     ) -> impl std::future::Future<Output = Result<(), Error>>;
+    
+    fn update_user(
+        &self,
+        conn: &PgPool,
+        user_id: Uuid,
+        user: UserUpdate,
+    ) -> impl std::future::Future<Output = Result<User, Error>>;
+
 }

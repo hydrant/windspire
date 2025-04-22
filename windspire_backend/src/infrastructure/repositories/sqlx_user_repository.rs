@@ -2,7 +2,7 @@ use anyhow::Result;
 use sqlx::{Error, PgPool};
 use uuid::{NoContext, Timestamp, Uuid};
 
-use crate::domain::{models::user::{User, UserCreate}, interface::user_repository::UserRepository};
+use crate::domain::{interface::user_repository::UserRepository, models::user::{User, UserCreate, UserUpdate}};
 
 
 pub struct SqlxUserRepository;
@@ -82,4 +82,31 @@ impl UserRepository for SqlxUserRepository {
     }  
         Ok(())
     }
+
+    async fn update_user(
+        &self,
+        conn: &PgPool,
+        user_id: Uuid,
+        user_update: UserUpdate,
+    ) -> Result<User, Error> {
+        let user = sqlx::query_as!(
+            User,
+            r#"
+            UPDATE users
+            SET first_name = $1, last_name = $2, email = $3, phone = $4, country_id = $5
+            WHERE id = $6
+            RETURNING id, first_name, last_name, email, phone, country_id
+            "#,
+            user_update.first_name,
+            user_update.last_name,
+            user_update.email,
+            user_update.phone,
+            user_update.country_id,
+            user_id
+        )
+        .fetch_one(conn)
+        .await?;
+        Ok(user)
+    }
+
 }

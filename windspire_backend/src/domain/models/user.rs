@@ -19,3 +19,12 @@ pub struct UserCreate {
     pub phone: Option<String>,
     pub country_id: Uuid,
 }
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct UserUpdate {
+    pub first_name: String,
+    pub last_name: String,
+    pub email: String,
+    pub phone: Option<String>,
+    pub country_id: Uuid,
+}
