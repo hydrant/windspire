@@ -28,3 +28,18 @@ GET http://localhost:8080/users
 ### Delete user by ID
 @delete_user_id = 01964081-4fbf-747a-ae64-d17030fc3dcc
 DELETE http://localhost:8080/users/{{delete_user_id}}
+
+
+### Update user
+
+@update_user_id = 01964089-9639-7cc4-aa29-4c7296de874a
+PUT http://localhost:8080/users/{{update_user_id}}
+Content-Type: application/json
+
+{
+    "first_name": "Martin Jensen",
+    "last_name": "Størholt",
+    "email": "martinstoerholt@gmail.com",
+    "phone": "47032900",
+    "country_id": "0196407f-574a-7061-a353-03f612af0766"
+}
