@@ -1,9 +1,17 @@
-use axum::{extract::{Path, State}, http::{header, StatusCode}, response::IntoResponse, Json};
+use crate::{
+    application::common::http_reponse::json_response,
+    domain::{interface::country_repository::CountryRepository, models::country::CountryUpdate},
+    infrastructure::repositories::sqlx_country_repository::SqlxCountryRepository,
+};
+use axum::{
+    Json,
+    extract::{Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+};
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
-use crate::{domain::{interface::country_repository::CountryRepository, models::country::CountryUpdate}, infrastructure::repositories::sqlx_country_repository::SqlxCountryRepository};
-
 
 pub async fn update_country_command(
     State(pg_pool): State<PgPool>,
@@ -11,21 +19,18 @@ pub async fn update_country_command(
     Json(country_update): Json<CountryUpdate>,
 ) -> impl IntoResponse {
     let repository = SqlxCountryRepository;
-    match repository.update_country(&pg_pool, country_id, country_update).await {
-        Ok(users) => (
-            StatusCode::OK,
-            [(header::CONTENT_TYPE, "application/json")],
-            json!({ "success" : true, "data" : users }).to_string(),
-        ),
-        Err(sqlx::Error::RowNotFound) => (
+    match repository
+        .update_country(&pg_pool, country_id, country_update)
+        .await
+    {
+        Ok(country) => json_response(StatusCode::OK, json!({ "success": true, "data": country })),
+        Err(sqlx::Error::RowNotFound) => json_response(
             StatusCode::NOT_FOUND,
-            [(header::CONTENT_TYPE, "application/json")],
-            json!({ "success": false, "message": "User not found" }).to_string(),
+            json!({ "success": false, "message": "Country not found" }),
         ),
-        Err(e) => (
+        Err(e) => json_response(
             StatusCode::INTERNAL_SERVER_ERROR,
-            [(header::CONTENT_TYPE, "application/json")],
-            json!({ "success" : false, "message" : e.to_string() }).to_string(),
+            json!({ "success": false, "message": e.to_string() }),
         ),
     }
 }

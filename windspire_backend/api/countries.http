@@ -5,14 +5,18 @@ GET http://localhost:8080/countries
 @country_id=019657a2-2a26-74d0-9c7d-fa91f8be1054
 GET http://localhost:8080/countries/{{country_id}}
 
+### Getting country by ID which does not exist
+@country_id_does_not_exist=01965c2f-70e0-7c28-939b-c9993755566a
+GET http://localhost:8080/countries/{{country_id_does_not_exist}}
+
 ### Insert country
 POST http://localhost:8080/countries
 Content-Type: application/json
 
 {
-  "iso_name" : "Sinland",
-  "iso_alpha_2" : "SI",
-  "iso_alpha_3" : "SIN"
+  "iso_name" : "United Kingdom",
+  "iso_alpha_2" : "GB",
+  "iso_alpha_3" : "GBR"
 }
 
 ### Delete country by ID
@@ -26,7 +30,7 @@ PUT http://localhost:8080/countries/{{update_country_id}}
 Content-Type: application/json
 
 {
-  "iso_name" : "Finland",
+  "iso_name" : "Finlandia",
   "iso_alpha_2" : "FI",
   "iso_alpha_3" : "FIN"
 }
