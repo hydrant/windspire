@@ -14,9 +14,19 @@ POST http://localhost:8080/countries
 Content-Type: application/json
 
 {
-  "iso_name" : "United Kingdom",
-  "iso_alpha_2" : "GB",
-  "iso_alpha_3" : "GBR"
+  "iso_name" : "Germany",
+  "iso_alpha_2" : "DE",
+  "iso_alpha_3" : "DEU"
+}
+
+### Insert country - incorrect length on iso_alpha_2 and iso_alpha_3. Validation error
+POST http://localhost:8080/countries
+Content-Type: application/json
+
+{
+  "iso_name" : "Fakeland",
+  "iso_alpha_2" : "F",
+  "iso_alpha_3" : "Fake"
 }
 
 ### Delete country by ID
