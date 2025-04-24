@@ -10,7 +10,7 @@ pub struct SqlxCountryRepository;
 
 impl CountryRepository for SqlxCountryRepository {
     async fn get_countries(&self, pool: &PgPool) -> Result<Vec<Country>, Error> {
-        let users = sqlx::query_as!(
+        let countries = sqlx::query_as!(
             Country,
             r#"
             SELECT  
@@ -24,7 +24,7 @@ impl CountryRepository for SqlxCountryRepository {
         .fetch_all(pool)
         .await?;
 
-        Ok(users)
+        Ok(countries)
     }
 
     async fn get_country_by_id(&self, pool: &PgPool, country_id: Uuid) -> Result<Country, Error> {
@@ -104,6 +104,50 @@ impl CountryRepository for SqlxCountryRepository {
         )
         .fetch_one(conn)
         .await?;
+        Ok(country)
+    }
+
+    async fn get_country_by_code(
+        &self,
+        pool: &PgPool,
+        country_code: String,
+    ) -> Result<Country, Error> {
+        // Check if the country code is 2 or 3 characters long and contains only ASCII alphabetic characters
+        if (country_code.len() != 2 && country_code.len() != 3)
+            || !country_code.chars().all(|c| c.is_ascii_alphabetic())
+        {
+            return Err(Error::ColumnNotFound("Invalid country code".to_string()));
+        }
+
+        // Compose the SQL query to fetch the country by code
+        // Use the appropriate column based on the length of the country code
+        let query = if country_code.len() == 2 {
+            r#"
+            SELECT  
+                id,
+                iso_name,
+                iso_alpha_2,
+                iso_alpha_3
+            FROM countries 
+            WHERE iso_alpha_2 = $1
+            "#
+        } else {
+            r#"
+            SELECT  
+                id,
+                iso_name,
+                iso_alpha_2,
+                iso_alpha_3
+            FROM countries 
+            WHERE iso_alpha_3 = $1
+            "#
+        };
+
+        let code = country_code.to_ascii_uppercase();
+        let country = sqlx::query_as::<_, Country>(query)
+            .bind(code)
+            .fetch_one(pool)
+            .await?;
         Ok(country)
     }
 }
