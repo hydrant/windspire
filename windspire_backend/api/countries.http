@@ -9,6 +9,20 @@ GET http://localhost:8080/countries/{{country_id}}
 @country_id_does_not_exist=01965c2f-70e0-7c28-939b-c9993755566a
 GET http://localhost:8080/countries/{{country_id_does_not_exist}}
 
+### Getting country by iso code
+@country_iso_code=nor
+GET http://localhost:8080/countries/code/{{country_iso_code}}
+
+
+### Getting country by iso code - when code does not exist
+@bad_country_iso_code=xyz
+GET http://localhost:8080/countries/code/{{bad_country_iso_code}}
+
+### Getting country by iso code - when format is incorrect
+@wrong_format_country_iso_code=xyzabc
+GET http://localhost:8080/countries/code/{{wrong_format_country_iso_code}}
+
+
 ### Insert country
 POST http://localhost:8080/countries
 Content-Type: application/json

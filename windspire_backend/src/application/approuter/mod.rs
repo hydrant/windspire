@@ -1,27 +1,23 @@
 use axum::{
-    routing::{delete, get, post, put}, Router
+    Router,
+    routing::{delete, get, post, put},
 };
 
 use crate::application::{
     commands::{
-        delete_user_command::delete_user_command, 
-        insert_user_command::insert_user_command,   
-        update_user_command::update_user_command,   
-        insert_country_command::insert_country_command,   
-        update_country_command::update_country_command, 
-        delete_country_command::delete_country_command, 
+        delete_country_command::delete_country_command, delete_user_command::delete_user_command,
+        insert_country_command::insert_country_command, insert_user_command::insert_user_command,
+        update_country_command::update_country_command, update_user_command::update_user_command,
     },
     queries::{
-        get_countries_query::get_countries_query, 
-        get_users_query::get_users_query,
+        get_countries_query::get_countries_query,
+        get_country_by_code_query::get_country_by_code_query,
         get_country_by_id_query::get_country_by_id_query,
-        get_user_by_id_query::get_user_by_id_query
+        get_user_by_id_query::get_user_by_id_query, get_users_query::get_users_query,
     },
 };
 
 use sqlx::PgPool;
-
-
 
 pub fn create_router(pool: PgPool) -> Router {
     Router::new()
@@ -34,6 +30,10 @@ pub fn create_router(pool: PgPool) -> Router {
         .route("/countries", get(get_countries_query))
         .route("/countries", post(insert_country_command))
         .route("/countries/{country_id}", get(get_country_by_id_query))
+        .route(
+            "/countries/code/{country_code}",
+            get(get_country_by_code_query),
+        )
         .route("/countries/{country_id}", put(update_country_command))
         .route("/countries/{country_id}", delete(delete_country_command))
         .with_state(pool)

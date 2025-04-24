@@ -4,13 +4,17 @@ use uuid::Uuid;
 
 use crate::domain::models::country::{Country, CountryCreate, CountryUpdate};
 
-
-
 pub(crate) trait CountryRepository {
     fn get_country_by_id(
         &self,
         pool: &PgPool,
         country_id: Uuid,
+    ) -> impl std::future::Future<Output = Result<Country, Error>>;
+
+    fn get_country_by_code(
+        &self,
+        pool: &PgPool,
+        country_code: String,
     ) -> impl std::future::Future<Output = Result<Country, Error>>;
 
     fn get_countries(
@@ -36,5 +40,4 @@ pub(crate) trait CountryRepository {
         country_id: Uuid,
         country_update: CountryUpdate,
     ) -> impl std::future::Future<Output = Result<Country, Error>>;
-
 }
