@@ -1,0 +1,1 @@
+DROP INDEX idx_countries_iso_alpha_3;
