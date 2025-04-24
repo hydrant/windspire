@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX idx_countries_iso_alpha_2 ON public.countries (iso_alpha_2);
