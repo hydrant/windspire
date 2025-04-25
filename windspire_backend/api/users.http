@@ -26,6 +26,19 @@ Content-Type: application/json
     "country_id": "0196407f-574a-7061-a353-03f612af0766"
 }
 
+### Create new user - bad data
+
+POST http://localhost:8080/users
+Content-Type: application/json
+
+{
+    "first_name": "H",
+    "last_name": "",
+    "email": "hg@mail",
+    "phone": "93",
+    "country_id": "0196407f-574a-7061-a353-03f612af0766"
+}
+
 
 ### Delete user by ID
 @delete_user_id = 01965c13-8fad-770d-9e2e-a8e61eee121f
