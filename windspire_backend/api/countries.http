@@ -58,3 +58,15 @@ Content-Type: application/json
   "iso_alpha_2" : "FI",
   "iso_alpha_3" : "FIN"
 }
+
+
+### Update country - incorrect length on iso_alpha_2 and iso_alpha_3. Validation error
+@incorrect_update_country_id=019657a2-2a26-74d0-9c7d-fa91f8be1054
+PUT http://localhost:8080/countries/{{incorrect_update_country_id}}
+Content-Type: application/json
+
+{
+  "iso_name" : "Finlandia",
+  "iso_alpha_2" : "FINN",
+  "iso_alpha_3" : "FI"
+}

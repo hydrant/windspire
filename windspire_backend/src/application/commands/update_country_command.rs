@@ -12,12 +12,24 @@ use axum::{
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
+use validator::Validate;
 
 pub async fn update_country_command(
     State(pg_pool): State<PgPool>,
     Path(country_id): Path<Uuid>,
     Json(country_update): Json<CountryUpdate>,
 ) -> impl IntoResponse {
+    // Validate the country_update data
+    match country_update.validate() {
+        Ok(_) => (),
+        Err(e) => {
+            return json_response(
+                StatusCode::BAD_REQUEST,
+                json!({ "success": false, "message": e }),
+            );
+        }
+    };
+
     let repository = SqlxCountryRepository;
     match repository
         .update_country(&pg_pool, country_id, country_update)
