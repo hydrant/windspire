@@ -32,11 +32,11 @@ POST http://localhost:8080/users
 Content-Type: application/json
 
 {
-    "first_name": "H",
-    "last_name": "",
+    "firstName": "H",
+    "lastName": "",
     "email": "hg@mail",
     "phone": "93",
-    "country_id": "0196407f-574a-7061-a353-03f612af0766"
+    "countryId": "0196407f-574a-7061-a353-03f612af0766"
 }
 
 
@@ -52,9 +52,9 @@ PUT http://localhost:8080/users/{{update_user_id}}
 Content-Type: application/json
 
 {
-    "first_name": "Henrik Gamer",
-    "last_name": "Kjellevold",
+    "firstName": "Henrik Gamer",
+    "lastName": "Kjellevold",
     "email": "martinstoerholt@gmail.com",
     "phone": "47032900",
-    "country_id": "0196407f-574a-7061-a353-03f612af0766"
+    "countryId": "0196407f-574a-7061-a353-03f612af0766"
 }

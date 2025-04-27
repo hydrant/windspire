@@ -28,9 +28,9 @@ POST http://localhost:8080/countries
 Content-Type: application/json
 
 {
-  "iso_name" : "Germany",
-  "iso_alpha_2" : "DE",
-  "iso_alpha_3" : "DEU"
+  "isoName" : "Finland",
+  "isoAlpha2" : "FI",
+  "isoAlpha3" : "FIN"
 }
 
 ### Insert country - incorrect length on iso_alpha_2 and iso_alpha_3. Validation error
@@ -38,13 +38,13 @@ POST http://localhost:8080/countries
 Content-Type: application/json
 
 {
-  "iso_name" : "Fakeland",
-  "iso_alpha_2" : "F",
-  "iso_alpha_3" : "Fake"
+  "isoName" : "Fakeland",
+  "isoAlpha2" : "F",
+  "isoAlpha3" : "Fake"
 }
 
 ### Delete country by ID
-@delete_country_id = 0196407f-574a-7061-a353-03f612af0766
+@delete_country_id = 019657a2-2a26-74d0-9c7d-fa91f8be1054
 DELETE http://localhost:8080/countries/{{delete_country_id}}
 
 
@@ -54,9 +54,9 @@ PUT http://localhost:8080/countries/{{update_country_id}}
 Content-Type: application/json
 
 {
-  "iso_name" : "Finlandia",
-  "iso_alpha_2" : "FI",
-  "iso_alpha_3" : "FIN"
+  "isoName" : "Finlandia",
+  "isoAlpha2" : "FI",
+  "isoAlpha3" : "FIN"
 }
 
 
@@ -66,7 +66,7 @@ PUT http://localhost:8080/countries/{{incorrect_update_country_id}}
 Content-Type: application/json
 
 {
-  "iso_name" : "Finlandia",
-  "iso_alpha_2" : "FINN",
-  "iso_alpha_3" : "FI"
+  "isoName" : "Finlandia",
+  "isoAlpha2" : "FINN",
+  "isoAlpha3" : "FI"
 }
