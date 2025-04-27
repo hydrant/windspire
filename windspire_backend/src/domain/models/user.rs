@@ -20,6 +20,7 @@ pub struct User {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Validate)]
+#[serde(rename_all = "camelCase")]
 pub struct UserCreate {
     #[validate(length(min = 2, message = "First name must contain 2 at least characters"))]
     pub first_name: String,
@@ -34,6 +35,7 @@ pub struct UserCreate {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Validate)]
+#[serde(rename_all = "camelCase")]
 pub struct UserUpdate {
     #[validate(length(min = 2, message = "First name must contain 2 at least characters"))]
     pub first_name: String,
