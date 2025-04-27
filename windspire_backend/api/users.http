@@ -47,13 +47,13 @@ DELETE http://localhost:8080/users/{{delete_user_id}}
 
 ### Update user
 
-@update_user_id = 01965c13-8fad-770d-9e2e-a8e61eee121f
+@update_user_id = 0196407f-574a-7061-a353-03f612af0766
 PUT http://localhost:8080/users/{{update_user_id}}
 Content-Type: application/json
 
 {
-    "first_name": "Martin Jensen",
-    "last_name": "Størholt",
+    "first_name": "Henrik Gamer",
+    "last_name": "Kjellevold",
     "email": "martinstoerholt@gmail.com",
     "phone": "47032900",
     "country_id": "0196407f-574a-7061-a353-03f612af0766"

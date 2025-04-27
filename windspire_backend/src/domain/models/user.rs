@@ -33,11 +33,15 @@ pub struct UserCreate {
     pub country_id: Uuid,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Validate)]
 pub struct UserUpdate {
+    #[validate(length(min = 2, message = "First name must contain 2 at least characters"))]
     pub first_name: String,
+    #[validate(length(min = 1, message = "First name must contain 1 at least characters"))]
     pub last_name: String,
+    #[validate(regex(path = *REGEX_EMAIL, message = "Email has incorrect format"))]
     pub email: String,
+    #[validate(length(min = 3, message = "Phone must contain 3 at least characters"))]
     pub phone: Option<String>,
     pub country_id: Uuid,
 }
