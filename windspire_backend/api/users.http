@@ -19,11 +19,11 @@ POST http://localhost:8080/users
 Content-Type: application/json
 
 {
-    "first_name": "Håkon",
-    "last_name": "Størholt",
-    "email": "hakonstoerholt@gmail.com",
-    "phone": "93811817",
-    "country_id": "0196407f-574a-7061-a353-03f612af0766"
+    "firstName": "Bjarne",
+    "lastName": "Betjent",
+    "email": "bjarne.betjent@dsesam.com",
+    "phone": "98765432",
+    "countryId": "0196407f-574a-7061-a353-03f612af0766"
 }
 
 ### Create new user - bad data
@@ -41,20 +41,20 @@ Content-Type: application/json
 
 
 ### Delete user by ID
-@delete_user_id = 01965c13-8fad-770d-9e2e-a8e61eee121f
+@delete_user_id = 01967b4e-dfe3-740e-bd2f-e5491f426100
 DELETE http://localhost:8080/users/{{delete_user_id}}
 
 
 ### Update user
 
-@update_user_id = 0196407f-574a-7061-a353-03f612af0766
+@update_user_id = 01967b4f-94e0-74c5-a862-3175f4862f44
 PUT http://localhost:8080/users/{{update_user_id}}
 Content-Type: application/json
 
 {
-    "firstName": "Henrik Gamer",
-    "lastName": "Kjellevold",
-    "email": "martinstoerholt@gmail.com",
-    "phone": "47032900",
+    "firstName": "Bjarne",
+    "lastName": "Betjent",
+    "email": "bjarne@betjent.no",
+    "phone": "98765432",
     "countryId": "0196407f-574a-7061-a353-03f612af0766"
 }

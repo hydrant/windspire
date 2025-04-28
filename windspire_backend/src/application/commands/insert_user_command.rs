@@ -1,5 +1,5 @@
 use crate::{
-    application::common::http_reponse::json_response,
+    application::http_response::{internal_server_error_json_response, json_response},
     domain::{interface::user_repository::UserRepository, models::user::UserCreate},
     infrastructure::repositories::sqlx_user_repository::SqlxUserRepository,
 };
@@ -30,9 +30,6 @@ pub async fn insert_user_command(
     let repository = SqlxUserRepository;
     match repository.insert_user(&pg_pool, user_create).await {
         Ok(users) => json_response(StatusCode::OK, json!({ "success": true, "data": users })),
-        Err(e) => json_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            json!({ "success": false, "message": e.to_string() }),
-        ),
+        Err(e) => internal_server_error_json_response(e),
     }
 }

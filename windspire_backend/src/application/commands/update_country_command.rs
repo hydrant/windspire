@@ -1,5 +1,7 @@
 use crate::{
-    application::common::http_reponse::json_response,
+    application::http_response::{
+        internal_server_error_json_response, json_response, row_not_found_error_json_response,
+    },
     domain::{interface::country_repository::CountryRepository, models::country::CountryUpdate},
     infrastructure::repositories::sqlx_country_repository::SqlxCountryRepository,
 };
@@ -36,13 +38,7 @@ pub async fn update_country_command(
         .await
     {
         Ok(country) => json_response(StatusCode::OK, json!({ "success": true, "data": country })),
-        Err(sqlx::Error::RowNotFound) => json_response(
-            StatusCode::NOT_FOUND,
-            json!({ "success": false, "message": "Country not found" }),
-        ),
-        Err(e) => json_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            json!({ "success": false, "message": e.to_string() }),
-        ),
+        Err(sqlx::Error::RowNotFound) => row_not_found_error_json_response("Country not found"),
+        Err(e) => internal_server_error_json_response(e),
     }
 }

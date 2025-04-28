@@ -1,9 +1,8 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse};
-use serde_json::json;
+use axum::{extract::State, response::IntoResponse};
 use sqlx::PgPool;
 
 use crate::{
-    application::common::http_reponse::json_response,
+    application::http_response::{internal_server_error_json_response, ok_json_response},
     domain::interface::country_repository::CountryRepository,
     infrastructure::repositories::sqlx_country_repository::SqlxCountryRepository,
 };
@@ -11,13 +10,7 @@ use crate::{
 pub async fn get_countries_query(State(pg_pool): State<PgPool>) -> impl IntoResponse {
     let repository = SqlxCountryRepository;
     match repository.get_countries(&pg_pool).await {
-        Ok(countries) => json_response(
-            StatusCode::OK,
-            json!({ "success" : true, "data" : countries }),
-        ),
-        Err(e) => json_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            json!({ "success" : false, "message" : e.to_string() }),
-        ),
+        Ok(countries) => ok_json_response(countries),
+        Err(e) => internal_server_error_json_response(e),
     }
 }
