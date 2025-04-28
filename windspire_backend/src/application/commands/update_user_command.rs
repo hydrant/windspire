@@ -1,9 +1,19 @@
-use axum::{extract::{Path, State}, http::StatusCode, response::IntoResponse, Json};
+use crate::{
+    application::http_response::{
+        internal_server_error_json_response, json_response, row_not_found_error_json_response,
+    },
+    domain::{interface::user_repository::UserRepository, models::user::UserUpdate},
+    infrastructure::repositories::sqlx_user_repository::SqlxUserRepository,
+};
+use axum::{
+    Json,
+    extract::{Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+};
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
-use crate::{application::common::http_reponse::json_response, domain::{interface::user_repository::UserRepository, models::user::UserUpdate}, infrastructure::repositories::sqlx_user_repository::SqlxUserRepository};
-
 
 pub async fn update_user_command(
     State(pg_pool): State<PgPool>,
@@ -13,7 +23,7 @@ pub async fn update_user_command(
     let repository = SqlxUserRepository;
     match repository.update_user(&pg_pool, user_id, user_update).await {
         Ok(users) => json_response(StatusCode::OK, json!({ "success": true, "data": users })),
-        Err(sqlx::Error::RowNotFound) => json_response(StatusCode::NOT_FOUND, json!({ "success": false, "message": "User not found" })),
-        Err(e) => json_response(StatusCode::INTERNAL_SERVER_ERROR, json!({ "success": false, "message": e.to_string() })),
+        Err(sqlx::Error::RowNotFound) => row_not_found_error_json_response("User not found"),
+        Err(e) => internal_server_error_json_response(e),
     }
 }

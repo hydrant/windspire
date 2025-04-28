@@ -44,24 +44,24 @@ Content-Type: application/json
 }
 
 ### Delete country by ID
-@delete_country_id = 019657a2-2a26-74d0-9c7d-fa91f8be1054
+@delete_country_id = 019677b0-f56b-7ec1-986a-6845e971df1b
 DELETE http://localhost:8080/countries/{{delete_country_id}}
 
 
 ### Update country
-@update_country_id=019657a2-2a26-74d0-9c7d-fa91f8be1054
+@update_country_id=01967b4c-8a93-792b-9865-b2a4a5365fe0
 PUT http://localhost:8080/countries/{{update_country_id}}
 Content-Type: application/json
 
 {
-  "isoName" : "Finlandia",
+  "isoName" : "Finland",
   "isoAlpha2" : "FI",
   "isoAlpha3" : "FIN"
 }
 
 
 ### Update country - incorrect length on iso_alpha_2 and iso_alpha_3. Validation error
-@incorrect_update_country_id=019657a2-2a26-74d0-9c7d-fa91f8be1054
+@incorrect_update_country_id=01967b4c-8a93-792b-9865-b2a4a5365fe0
 PUT http://localhost:8080/countries/{{incorrect_update_country_id}}
 Content-Type: application/json
 
