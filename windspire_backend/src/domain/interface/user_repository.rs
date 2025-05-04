@@ -2,8 +2,7 @@ use anyhow::Result;
 use sqlx::{Error, PgPool};
 use uuid::Uuid;
 
-use crate::domain::models::user::{User, UserCreate, UserUpdate};
-
+use crate::domain::models::user::{User, UserCreate, UserUpdate, UserWithCountry};
 
 pub(crate) trait UserRepository {
     fn get_user_by_id(
@@ -15,7 +14,7 @@ pub(crate) trait UserRepository {
     fn get_users(
         &self,
         pool: &PgPool,
-    ) -> impl std::future::Future<Output = Result<Vec<User>, Error>>;
+    ) -> impl std::future::Future<Output = Result<Vec<UserWithCountry>, Error>>;
 
     fn insert_user(
         &self,
@@ -28,12 +27,11 @@ pub(crate) trait UserRepository {
         conn: &PgPool,
         user_id: Uuid,
     ) -> impl std::future::Future<Output = Result<(), Error>>;
-    
+
     fn update_user(
         &self,
         conn: &PgPool,
         user_id: Uuid,
         user: UserUpdate,
     ) -> impl std::future::Future<Output = Result<User, Error>>;
-
 }

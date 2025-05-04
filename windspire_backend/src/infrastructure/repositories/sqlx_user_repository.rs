@@ -2,8 +2,10 @@ use anyhow::Result;
 use sqlx::{Error, PgPool};
 use uuid::{NoContext, Timestamp, Uuid};
 
-use crate::domain::{interface::user_repository::UserRepository, models::user::{User, UserCreate, UserUpdate}};
-
+use crate::domain::{
+    interface::user_repository::UserRepository,
+    models::user::{User, UserCreate, UserUpdate, UserWithCountry},
+};
 
 pub struct SqlxUserRepository;
 
@@ -30,18 +32,13 @@ impl UserRepository for SqlxUserRepository {
         Ok(user)
     }
 
-    async fn get_users(&self, pool: &PgPool) -> Result<Vec<User>, Error> {
+    async fn get_users(&self, pool: &PgPool) -> Result<Vec<UserWithCountry>, Error> {
         let users = sqlx::query_as!(
-            User,
+            UserWithCountry,
             r#"
-            SELECT  
-                users.id,
-                users.first_name,
-                users.last_name,
-                users.email,
-                users.phone,
-                users.country_id
-            FROM public.users 
+            SELECT u.id, u.first_name, u.last_name, u.email, u.phone, u.country_id, c.iso_name from public.users u
+            LEFT JOIN public.countries c
+            ON c.id = u.country_id            
             "#
         )
         .fetch_all(pool)
@@ -50,7 +47,11 @@ impl UserRepository for SqlxUserRepository {
         Ok(users)
     }
 
-    async fn insert_user(&self, conn: &PgPool, user_create: UserCreate) -> Result<User, sqlx::Error> {
+    async fn insert_user(
+        &self,
+        conn: &PgPool,
+        user_create: UserCreate,
+    ) -> Result<User, sqlx::Error> {
         // Generate UUID v7 id
         let ts = Timestamp::now(&NoContext);
         let id = Uuid::new_v7(ts);
@@ -61,25 +62,26 @@ impl UserRepository for SqlxUserRepository {
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id, first_name, last_name, email, phone, country_id
             "#,
-            id, user_create.first_name, user_create.last_name, user_create.email, user_create.phone, user_create.country_id
+            id,
+            user_create.first_name,
+            user_create.last_name,
+            user_create.email,
+            user_create.phone,
+            user_create.country_id
         )
         .fetch_one(conn)
         .await?;
 
-    Ok(user)
+        Ok(user)
     }
-    
-    async fn delete_user(
-        &self,
-        conn: &PgPool,
-        user_id: Uuid,
-    ) -> Result<(), Error> {
+
+    async fn delete_user(&self, conn: &PgPool, user_id: Uuid) -> Result<(), Error> {
         let result = sqlx::query!("DELETE FROM users WHERE id = $1", user_id)
-        .execute(conn)
-        .await?;  
-    if result.rows_affected() == 0 {
-        return Err(sqlx::Error::RowNotFound);
-    }  
+            .execute(conn)
+            .await?;
+        if result.rows_affected() == 0 {
+            return Err(sqlx::Error::RowNotFound);
+        }
         Ok(())
     }
 
@@ -108,5 +110,4 @@ impl UserRepository for SqlxUserRepository {
         .await?;
         Ok(user)
     }
-
 }
