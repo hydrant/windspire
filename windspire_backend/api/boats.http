@@ -1,0 +1,26 @@
+### Create new boat
+
+POST http://localhost:8080/boats
+Content-Type: application/json
+
+{
+    "name": "First Time",
+    "brand": "First",
+    "model": "Class 8",
+    "sailNumber": "NOR5828",
+    "countryId": "0196407f-574a-7061-a353-03f612af0766"
+}
+
+### Create new boat - bad data
+
+POST http://localhost:8080/boats
+Content-Type: application/json
+
+{
+    "name": "H",
+    "brand": "",
+    "model": "C",
+    "sailNumber": "AB8-12",
+    "countryId": "0196407f-574a-7061-a353-03f612af0766"
+}
+

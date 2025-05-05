@@ -6,8 +6,9 @@ use axum::{
 use crate::application::{
     commands::{
         delete_country_command::delete_country_command, delete_user_command::delete_user_command,
-        insert_country_command::insert_country_command, insert_user_command::insert_user_command,
-        update_country_command::update_country_command, update_user_command::update_user_command,
+        insert_boat_command::insert_boat_command, insert_country_command::insert_country_command,
+        insert_user_command::insert_user_command, update_country_command::update_country_command,
+        update_user_command::update_user_command,
     },
     queries::{
         get_countries_query::get_countries_query,
@@ -36,5 +37,6 @@ pub fn create_router(pool: PgPool) -> Router {
         )
         .route("/countries/{country_id}", put(update_country_command))
         .route("/countries/{country_id}", delete(delete_country_command))
+        .route("/boats", post(insert_boat_command))
         .with_state(pool)
 }
