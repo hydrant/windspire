@@ -9,29 +9,23 @@ pub(crate) trait UserRepository {
         &self,
         pool: &PgPool,
         user_id: Uuid,
-    ) -> impl std::future::Future<Output = Result<User, Error>>;
+    ) -> impl Future<Output = Result<User, Error>>;
 
-    fn get_users(
-        &self,
-        pool: &PgPool,
-    ) -> impl std::future::Future<Output = Result<Vec<UserWithCountry>, Error>>;
+    fn get_users(&self, pool: &PgPool)
+    -> impl Future<Output = Result<Vec<UserWithCountry>, Error>>;
 
     fn insert_user(
         &self,
         conn: &PgPool,
         user: UserCreate,
-    ) -> impl std::future::Future<Output = Result<User, Error>>;
+    ) -> impl Future<Output = Result<User, Error>>;
 
-    fn delete_user(
-        &self,
-        conn: &PgPool,
-        user_id: Uuid,
-    ) -> impl std::future::Future<Output = Result<(), Error>>;
+    fn delete_user(&self, conn: &PgPool, user_id: Uuid) -> impl Future<Output = Result<(), Error>>;
 
     fn update_user(
         &self,
         conn: &PgPool,
         user_id: Uuid,
         user: UserUpdate,
-    ) -> impl std::future::Future<Output = Result<User, Error>>;
+    ) -> impl Future<Output = Result<User, Error>>;
 }
