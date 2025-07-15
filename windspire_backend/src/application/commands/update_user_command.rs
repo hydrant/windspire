@@ -2,7 +2,7 @@ use crate::{
     application::http_response::{
         internal_server_error_json_response, json_response, row_not_found_error_json_response,
     },
-    domain::{interface::user_repository::UserRepository, models::user::UserUpdate},
+    domain::{models::user::UserUpdate, repositories::user_repository::UserRepository},
     infrastructure::repositories::sqlx_user_repository::SqlxUserRepository,
 };
 use axum::{

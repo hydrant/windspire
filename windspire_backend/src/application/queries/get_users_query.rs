@@ -3,7 +3,7 @@ use sqlx::PgPool;
 
 use crate::{
     application::http_response::{internal_server_error_json_response, ok_json_response},
-    domain::interface::user_repository::UserRepository,
+    domain::repositories::user_repository::UserRepository,
     infrastructure::repositories::sqlx_user_repository::SqlxUserRepository,
 };
 

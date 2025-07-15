@@ -1,6 +1,10 @@
 pub mod approuter;
 pub mod commands;
+pub mod config;
+pub mod handlers;
+pub mod middleware;
 pub mod queries;
+pub mod services;
 
 pub mod http_response {
     use axum::{
