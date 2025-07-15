@@ -79,7 +79,7 @@ impl RoleRepository for SqlxRoleRepository {
             id,
             name,
             description,
-            now
+            Some(now)
         )
         .fetch_one(pool)
         .await?;

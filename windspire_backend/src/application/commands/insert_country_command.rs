@@ -4,17 +4,19 @@ use axum::{
     response::IntoResponse,
 };
 use serde_json::json;
-use sqlx::PgPool;
 use validator::Validate;
 
 use crate::{
-    application::http_response::{internal_server_error_json_response, json_response},
+    application::{
+        http_response::{internal_server_error_json_response, json_response},
+        state::AppState,
+    },
     domain::{interface::country_repository::CountryRepository, models::country::CountryCreate},
     infrastructure::repositories::sqlx_country_repository::SqlxCountryRepository,
 };
 
 pub async fn insert_country_command(
-    State(pg_pool): State<PgPool>,
+    State(app_state): State<AppState>,
     Json(country_create): Json<CountryCreate>,
 ) -> impl IntoResponse {
     // Validate the country_create data
@@ -28,7 +30,10 @@ pub async fn insert_country_command(
         }
     };
     let repository = SqlxCountryRepository;
-    match repository.insert_country(&pg_pool, country_create).await {
+    match repository
+        .insert_country(&app_state.db_pool, country_create)
+        .await
+    {
         Ok(country) => json_response(StatusCode::OK, json!({ "success": true, "data": country })),
         Err(e) => internal_server_error_json_response(e),
     }

@@ -4,23 +4,25 @@ use axum::{
     response::IntoResponse,
 };
 use serde_json::json;
-use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{
-    application::http_response::{
-        internal_server_error_json_response, json_response, row_not_found_error_json_response,
+    application::{
+        http_response::{
+            internal_server_error_json_response, json_response, row_not_found_error_json_response,
+        },
+        state::AppState,
     },
     domain::repositories::user_repository::UserRepository,
     infrastructure::repositories::sqlx_user_repository::SqlxUserRepository,
 };
 
 pub async fn get_user_by_id_query(
-    State(pg_pool): State<PgPool>,
+    State(app_state): State<AppState>,
     Path(user_id): Path<Uuid>,
 ) -> impl IntoResponse {
     let repository = SqlxUserRepository;
-    match repository.get_user_by_id(&pg_pool, user_id).await {
+    match repository.get_user_by_id(&app_state.db_pool, user_id).await {
         Ok(users) => json_response(StatusCode::OK, json!({ "success": true, "data": users })),
         Err(sqlx::Error::RowNotFound) => row_not_found_error_json_response("User not found"),
         Err(err) => internal_server_error_json_response(err),

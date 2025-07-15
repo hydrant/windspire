@@ -4,7 +4,6 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use std::sync::Arc;
 
 use crate::application::services::jwt_service::{JwtError, JwtService};
 use crate::domain::models::auth::{AuthContext, Claims};
@@ -35,7 +34,7 @@ impl AuthError {
 }
 
 pub async fn jwt_auth_middleware(
-    State(jwt_service): State<Arc<JwtService>>,
+    State(app_state): State<crate::application::state::AppState>,
     headers: HeaderMap,
     mut request: Request,
     next: Next,
@@ -51,10 +50,13 @@ pub async fn jwt_auth_middleware(
         .ok_or((StatusCode::UNAUTHORIZED, "Invalid authorization format"))?;
 
     // Validate token
-    let claims = jwt_service.validate_token(token).map_err(|e| match e {
-        JwtError::ExpiredToken => (StatusCode::UNAUTHORIZED, "Token has expired"),
-        _ => (StatusCode::UNAUTHORIZED, "Invalid token"),
-    })?;
+    let claims = app_state
+        .jwt_service
+        .validate_token(token)
+        .map_err(|e| match e {
+            JwtError::ExpiredToken => (StatusCode::UNAUTHORIZED, "Token has expired"),
+            _ => (StatusCode::UNAUTHORIZED, "Invalid token"),
+        })?;
 
     // Create auth context and add to request extensions
     let auth_context = AuthContext {
@@ -69,14 +71,14 @@ pub async fn jwt_auth_middleware(
 
 // Optional middleware that doesn't fail if no token is provided
 pub async fn optional_jwt_auth_middleware(
-    State(jwt_service): State<Arc<JwtService>>,
+    State(app_state): State<crate::application::state::AppState>,
     headers: HeaderMap,
     mut request: Request,
     next: Next,
 ) -> Response {
     if let Some(auth_header) = headers.get("Authorization").and_then(|h| h.to_str().ok()) {
         if let Some(token) = JwtService::extract_bearer_token(auth_header) {
-            if let Ok(claims) = jwt_service.validate_token(token) {
+            if let Ok(claims) = app_state.jwt_service.validate_token(token) {
                 let auth_context = AuthContext {
                     user: claims_to_auth_user(&claims),
                     token: token.to_string(),

@@ -23,9 +23,9 @@ use crate::application::{
     },
 };
 
-use sqlx::PgPool;
+use crate::application::state::AppState;
 
-pub fn create_router(pool: PgPool) -> Router {
+pub fn create_router(app_state: AppState) -> Router {
     // CORS configuration for frontend integration
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -52,7 +52,7 @@ pub fn create_router(pool: PgPool) -> Router {
             get(get_country_by_code_query),
         )
         .layer(middleware::from_fn_with_state(
-            pool.clone(),
+            app_state.clone(),
             jwt_auth_middleware,
         ));
 
@@ -66,15 +66,15 @@ pub fn create_router(pool: PgPool) -> Router {
         .route("/countries/{country_id}", delete(delete_country_command))
         .route("/boats", post(insert_boat_command))
         .layer(middleware::from_fn_with_state(
-            pool.clone(),
+            app_state.clone(),
             require_permission(
-                crate::application::middleware::rbac_middleware::RequiredPermission::Specific(
-                    "admin:write".to_string(),
+                crate::application::middleware::rbac_middleware::RequiredPermission::new(
+                    "admin:write",
                 ),
             ),
         ))
         .layer(middleware::from_fn_with_state(
-            pool.clone(),
+            app_state.clone(),
             jwt_auth_middleware,
         ));
 
@@ -84,5 +84,5 @@ pub fn create_router(pool: PgPool) -> Router {
         .merge(protected_routes)
         .merge(admin_routes)
         .layer(cors)
-        .with_state(pool)
+        .with_state(app_state)
 }

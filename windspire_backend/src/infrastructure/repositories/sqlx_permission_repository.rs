@@ -107,7 +107,7 @@ impl PermissionRepository for SqlxPermissionRepository {
             description,
             resource,
             action,
-            now
+            Some(now)
         )
         .fetch_one(pool)
         .await?;

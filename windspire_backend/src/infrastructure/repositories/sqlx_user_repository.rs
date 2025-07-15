@@ -43,9 +43,9 @@ impl UserRepository for SqlxUserRepository {
         let users = sqlx::query_as!(
             UserWithCountry,
             r#"
-            SELECT u.id, u.first_name, u.last_name, u.email, u.phone, u.country_id, c.iso_name from public.users u
+            SELECT u.id, u.first_name, u.last_name, u.email, u.phone, u.country_id, c.iso_name, u.provider_id, u.provider_name, u.avatar_url from public.users u
             LEFT JOIN public.countries c
-            ON c.id = u.country_id            
+            ON c.id = u.country_id
             "#
         )
         .fetch_all(pool)
@@ -62,19 +62,22 @@ impl UserRepository for SqlxUserRepository {
         // Generate UUID v7 id
         let ts = Timestamp::now(&NoContext);
         let id = Uuid::new_v7(ts);
+        let now = Utc::now();
         let user = sqlx::query_as!(
             User,
             r#"
-            INSERT INTO users (id, first_name, last_name, email, phone, country_id)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, first_name, last_name, email, phone, country_id
+            INSERT INTO users (id, first_name, last_name, email, phone, country_id, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING id, first_name, last_name, email, phone, country_id, provider_id, provider_name, avatar_url, created_at, updated_at
             "#,
             id,
             user_create.first_name,
             user_create.last_name,
             user_create.email,
             user_create.phone,
-            user_create.country_id
+            user_create.country_id,
+            Some(now),
+            Some(now)
         )
         .fetch_one(conn)
         .await?;
@@ -98,19 +101,21 @@ impl UserRepository for SqlxUserRepository {
         user_id: Uuid,
         user_update: UserUpdate,
     ) -> Result<User, Error> {
+        let now = Utc::now();
         let user = sqlx::query_as!(
             User,
             r#"
             UPDATE users
-            SET first_name = $1, last_name = $2, email = $3, phone = $4, country_id = $5
-            WHERE id = $6
-            RETURNING id, first_name, last_name, email, phone, country_id
+            SET first_name = $1, last_name = $2, email = $3, phone = $4, country_id = $5, updated_at = $6
+            WHERE id = $7
+            RETURNING id, first_name, last_name, email, phone, country_id, provider_id, provider_name, avatar_url, created_at, updated_at
             "#,
             user_update.first_name,
             user_update.last_name,
             user_update.email,
             user_update.phone,
             user_update.country_id,
+            Some(now),
             user_id
         )
         .fetch_one(conn)
