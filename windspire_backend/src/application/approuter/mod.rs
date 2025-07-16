@@ -12,7 +12,7 @@ use crate::application::{
         update_user_command::update_user_command,
     },
     handlers::auth_handlers::{
-        login_handler, logout_handler, oauth_callback_handler, refresh_token_handler,
+        login_handler, logout_handler, me_handler, oauth_callback_handler, refresh_token_handler,
     },
     middleware::{auth_middleware::jwt_auth_middleware, rbac_middleware::require_permission},
     queries::{
@@ -28,14 +28,28 @@ use crate::application::state::AppState;
 pub fn create_router(app_state: AppState) -> Router {
     // CORS configuration for frontend integration
     let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any)
+        .allow_origin(
+            "http://localhost:5173"
+                .parse::<axum::http::HeaderValue>()
+                .unwrap(),
+        )
+        .allow_methods([
+            axum::http::Method::GET,
+            axum::http::Method::POST,
+            axum::http::Method::PUT,
+            axum::http::Method::DELETE,
+            axum::http::Method::OPTIONS,
+        ])
+        .allow_headers([
+            axum::http::header::AUTHORIZATION,
+            axum::http::header::CONTENT_TYPE,
+            axum::http::header::ACCEPT,
+        ])
         .allow_credentials(false);
 
     // Public routes (no authentication required)
     let public_routes = Router::new()
-        .route("/", get(|| async { "Hello World!" }))
+        .route("/health", get(|| async { "Backend is running!" }))
         .route("/auth/login", get(login_handler))
         .route("/auth/callback", get(oauth_callback_handler))
         .route("/auth/refresh", post(refresh_token_handler));
@@ -43,6 +57,7 @@ pub fn create_router(app_state: AppState) -> Router {
     // Protected routes (authentication required)
     let protected_routes = Router::new()
         .route("/auth/logout", post(logout_handler))
+        .route("/auth/me", get(me_handler))
         .route("/users", get(get_users_query))
         .route("/users/{user_id}", get(get_user_by_id_query))
         .route("/countries", get(get_countries_query))

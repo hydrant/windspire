@@ -51,6 +51,7 @@ impl JwtService {
             sub: user.id.to_string(),
             email: user.email.clone(),
             name: format!("{} {}", user.first_name, user.last_name),
+            picture: user.avatar_url.clone(),
             roles: user.roles.clone(),
             permissions: user.permissions.clone(),
             iat: now.timestamp(),
@@ -92,6 +93,7 @@ impl JwtService {
             sub: claims.sub.clone(),
             email: claims.email.clone(),
             name: claims.name.clone(),
+            picture: claims.picture.clone(),
             roles: claims.roles.clone(),
             permissions: claims.permissions.clone(),
             iat: now.timestamp(),
@@ -125,6 +127,7 @@ mod tests {
             last_name: "User".to_string(),
             provider_id: "123".to_string(),
             provider_name: "google".to_string(),
+            avatar_url: Some("https://example.com/avatar.jpg".to_string()),
             roles: vec!["user".to_string()],
             permissions: vec!["users:read_own".to_string()],
         }

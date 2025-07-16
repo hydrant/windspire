@@ -133,7 +133,7 @@ pub async fn oauth_callback_handler(
                 country_id: user_by_email.country_id,
                 provider_id: user_by_email.provider_id,
                 provider_name: user_by_email.provider_name,
-                avatar_url: None, // Not available in UserByEmail
+                avatar_url: google_user.picture.clone(), // Use Google profile picture
                 created_at: None, // Not available in UserByEmail
                 updated_at: None, // Not available in UserByEmail
             }
@@ -205,6 +205,7 @@ pub async fn oauth_callback_handler(
         last_name: user.last_name.clone(),
         provider_id: user.provider_id.unwrap_or_default(),
         provider_name: user.provider_name.unwrap_or_default(),
+        avatar_url: user.avatar_url.clone(),
         roles: user_with_roles
             .roles
             .iter()
@@ -235,14 +236,14 @@ pub async fn oauth_callback_handler(
 
     tracing::info!("Successfully authenticated user: {}", user.email);
 
-    let response = JwtTokenResponse {
-        access_token: jwt_token,
-        token_type: "Bearer".to_string(),
-        expires_in: app_state.config.jwt.expiration_hours * 3600,
-        user: auth_user,
-    };
-
-    ok_json_response(response).into_response()
+    // Instead of returning JSON, redirect to frontend with token
+    let frontend_url = format!("http://localhost:5173/auth/callback?token={}", jwt_token);
+    
+    (
+        StatusCode::FOUND,
+        [("Location", frontend_url.as_str())],
+        "Redirecting to frontend..."
+    ).into_response()
 }
 
 pub async fn refresh_token_handler(
@@ -300,6 +301,41 @@ pub async fn logout_handler(
     ok_json_response(serde_json::json!({
         "message": "Successfully logged out"
     }))
+}
+
+pub async fn me_handler(
+    State(_app_state): State<crate::application::state::AppState>,
+    request: axum::extract::Request,
+) -> impl IntoResponse {
+    // Extract auth context from request extensions
+    let auth_context = match request.extensions().get::<crate::domain::models::auth::AuthContext>() {
+        Some(ctx) => ctx,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "success": false,
+                    "message": "Authentication required"
+                })),
+            ).into_response();
+        }
+    };
+
+    tracing::info!("Getting current user info for: {}", auth_context.user.email);
+
+    // Return the user info from the JWT token
+    let user_info = serde_json::json!({
+        "id": auth_context.user.id,
+        "email": auth_context.user.email,
+        "name": format!("{} {}", auth_context.user.first_name, auth_context.user.last_name),
+        "first_name": auth_context.user.first_name,
+        "last_name": auth_context.user.last_name,
+        "picture": auth_context.user.avatar_url,
+        "roles": auth_context.user.roles,
+        "permissions": auth_context.user.permissions
+    });
+
+    ok_json_response(user_info)
 }
 
 async fn get_default_country_id(
