@@ -5,11 +5,11 @@ use oauth2::{
     TokenResponse, TokenUrl,
 };
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use uuid::Uuid;
 
 use crate::application::config::OAuthConfig;
-use crate::domain::models::auth::{AuthError, GoogleUserInfo};
+use crate::domain::models::auth::GoogleUserInfo;
 
 #[derive(Debug)]
 pub enum OAuthError {

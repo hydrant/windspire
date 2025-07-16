@@ -4,7 +4,7 @@ use application::services::{jwt_service::JwtService, oauth_service::OAuthService
 use application::state::AppState;
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
-use std::{env, sync::Arc};
+use std::sync::Arc;
 use tokio::net::TcpListener;
 
 mod application;

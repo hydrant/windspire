@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::domain::models::rbac::{Permission, Role, RolePermission};
+use crate::domain::models::rbac::{Permission, Role};
 use crate::infrastructure::error::Error;
 
 #[async_trait]

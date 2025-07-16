@@ -1,7 +1,5 @@
 use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::application::config::JwtConfig;
 use crate::domain::models::auth::{AuthUser, Claims};

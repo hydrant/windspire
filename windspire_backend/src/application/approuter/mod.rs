@@ -31,7 +31,7 @@ pub fn create_router(app_state: AppState) -> Router {
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any)
-        .allow_credentials(true);
+        .allow_credentials(false);
 
     // Public routes (no authentication required)
     let public_routes = Router::new()
