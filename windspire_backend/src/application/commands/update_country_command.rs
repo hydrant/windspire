@@ -1,6 +1,9 @@
 use crate::{
-    application::http_response::{
-        internal_server_error_json_response, json_response, row_not_found_error_json_response,
+    application::{
+        http_response::{
+            internal_server_error_json_response, json_response, row_not_found_error_json_response,
+        },
+        state::AppState,
     },
     domain::{interface::country_repository::CountryRepository, models::country::CountryUpdate},
     infrastructure::repositories::sqlx_country_repository::SqlxCountryRepository,
@@ -12,12 +15,12 @@ use axum::{
     response::IntoResponse,
 };
 use serde_json::json;
-use sqlx::PgPool;
+
 use uuid::Uuid;
 use validator::Validate;
 
 pub async fn update_country_command(
-    State(pg_pool): State<PgPool>,
+    State(app_state): State<AppState>,
     Path(country_id): Path<Uuid>,
     Json(country_update): Json<CountryUpdate>,
 ) -> impl IntoResponse {
@@ -34,7 +37,7 @@ pub async fn update_country_command(
 
     let repository = SqlxCountryRepository;
     match repository
-        .update_country(&pg_pool, country_id, country_update)
+        .update_country(&app_state.db_pool, country_id, country_update)
         .await
     {
         Ok(country) => json_response(StatusCode::OK, json!({ "success": true, "data": country })),

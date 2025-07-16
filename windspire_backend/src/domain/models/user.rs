@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -17,6 +18,11 @@ pub struct User {
     pub email: String,
     pub phone: Option<String>,
     pub country_id: Uuid,
+    pub provider_id: Option<String>,
+    pub provider_name: Option<String>,
+    pub avatar_url: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Validate)]
@@ -57,4 +63,29 @@ pub struct UserWithCountry {
     pub phone: Option<String>,
     pub country_id: Uuid,
     pub iso_name: Option<String>,
+    pub provider_id: Option<String>,
+    pub provider_name: Option<String>,
+    pub avatar_url: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct OAuthUserCreate {
+    pub email: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub provider_id: String,
+    pub provider_name: String,
+    pub avatar_url: Option<String>,
+    pub country_id: Uuid, // Default country will be set
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct UserByEmail {
+    pub id: Uuid,
+    pub email: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub provider_id: Option<String>,
+    pub provider_name: Option<String>,
+    pub country_id: Uuid,
 }

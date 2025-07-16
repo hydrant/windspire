@@ -1,6 +1,9 @@
 use crate::{
-    application::http_response::{internal_server_error_json_response, json_response},
-    domain::{interface::user_repository::UserRepository, models::user::UserCreate},
+    application::{
+        http_response::{internal_server_error_json_response, json_response},
+        state::AppState,
+    },
+    domain::{models::user::UserCreate, repositories::user_repository::UserRepository},
     infrastructure::repositories::sqlx_user_repository::SqlxUserRepository,
 };
 use axum::{
@@ -9,11 +12,11 @@ use axum::{
     response::IntoResponse,
 };
 use serde_json::json;
-use sqlx::PgPool;
+
 use validator::Validate;
 
 pub async fn insert_user_command(
-    State(pg_pool): State<PgPool>,
+    State(app_state): State<AppState>,
     Json(user_create): Json<UserCreate>,
 ) -> impl IntoResponse {
     // Validate the user_create data
@@ -28,7 +31,10 @@ pub async fn insert_user_command(
     };
 
     let repository = SqlxUserRepository;
-    match repository.insert_user(&pg_pool, user_create).await {
+    match repository
+        .insert_user(&app_state.db_pool, user_create)
+        .await
+    {
         Ok(users) => json_response(StatusCode::OK, json!({ "success": true, "data": users })),
         Err(e) => internal_server_error_json_response(e),
     }
