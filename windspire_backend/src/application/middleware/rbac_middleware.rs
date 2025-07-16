@@ -224,6 +224,7 @@ mod tests {
             last_name: "User".to_string(),
             provider_id: "123".to_string(),
             provider_name: "google".to_string(),
+            avatar_url: Some("https://example.com/avatar.jpg".to_string()),
             roles: roles.iter().map(|r| r.to_string()).collect(),
             permissions: permissions.iter().map(|p| p.to_string()).collect(),
         }

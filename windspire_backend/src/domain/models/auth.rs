@@ -9,6 +9,7 @@ pub struct AuthUser {
     pub last_name: String,
     pub provider_id: String,
     pub provider_name: String,
+    pub avatar_url: Option<String>,
     pub roles: Vec<String>,
     pub permissions: Vec<String>,
 }
@@ -18,6 +19,7 @@ pub struct Claims {
     pub sub: String, // Subject (user ID)
     pub email: String,
     pub name: String,
+    pub picture: Option<String>, // Avatar URL
     pub roles: Vec<String>,
     pub permissions: Vec<String>,
     pub iat: i64, // Issued at

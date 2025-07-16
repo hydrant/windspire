@@ -111,6 +111,7 @@ fn claims_to_auth_user(claims: &Claims) -> crate::domain::models::auth::AuthUser
             .join(" "),
         provider_id: "".to_string(), // This would be populated from database
         provider_name: "".to_string(), // This would be populated from database
+        avatar_url: claims.picture.clone(),
         roles: claims.roles.clone(),
         permissions: claims.permissions.clone(),
     }
@@ -148,6 +149,7 @@ mod tests {
             last_name: "User".to_string(),
             provider_id: "123".to_string(),
             provider_name: "google".to_string(),
+            avatar_url: Some("https://example.com/avatar.jpg".to_string()),
             roles: vec!["user".to_string()],
             permissions: vec!["users:read_own".to_string()],
         }
@@ -183,6 +185,7 @@ mod tests {
             sub: Uuid::new_v4().to_string(),
             email: "test@example.com".to_string(),
             name: "John Doe".to_string(),
+            picture: Some("https://example.com/avatar.jpg".to_string()),
             roles: vec!["user".to_string()],
             permissions: vec!["users:read_own".to_string()],
             iat: 1234567890,
