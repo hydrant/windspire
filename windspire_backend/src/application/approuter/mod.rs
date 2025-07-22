@@ -2,13 +2,14 @@ use axum::{
     Router, middleware,
     routing::{delete, get, post, put},
 };
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::CorsLayer;
 
 use crate::application::{
     commands::{
-        delete_country_command::delete_country_command, delete_user_command::delete_user_command,
-        insert_boat_command::insert_boat_command, insert_country_command::insert_country_command,
-        insert_user_command::insert_user_command, update_country_command::update_country_command,
+        delete_boat_command::delete_boat_command, delete_country_command::delete_country_command,
+        delete_user_command::delete_user_command, insert_boat_command::insert_boat_command,
+        insert_country_command::insert_country_command, insert_user_command::insert_user_command,
+        update_boat_command::update_boat_command, update_country_command::update_country_command,
         update_user_command::update_user_command,
     },
     handlers::auth_handlers::{
@@ -16,7 +17,7 @@ use crate::application::{
     },
     middleware::{auth_middleware::jwt_auth_middleware, rbac_middleware::require_permission},
     queries::{
-        get_countries_query::get_countries_query,
+        get_boats_query::get_boats_query, get_countries_query::get_countries_query,
         get_country_by_code_query::get_country_by_code_query,
         get_country_by_id_query::get_country_by_id_query,
         get_user_by_id_query::get_user_by_id_query, get_users_query::get_users_query,
@@ -60,6 +61,7 @@ pub fn create_router(app_state: AppState) -> Router {
         .route("/auth/me", get(me_handler))
         .route("/users", get(get_users_query))
         .route("/users/{user_id}", get(get_user_by_id_query))
+        .route("/boats", get(get_boats_query))
         .route("/countries", get(get_countries_query))
         .route("/countries/{country_id}", get(get_country_by_id_query))
         .route(
@@ -80,6 +82,8 @@ pub fn create_router(app_state: AppState) -> Router {
         .route("/countries/{country_id}", put(update_country_command))
         .route("/countries/{country_id}", delete(delete_country_command))
         .route("/boats", post(insert_boat_command))
+        .route("/boats/{boat_id}", put(update_boat_command))
+        .route("/boats/{boat_id}", delete(delete_boat_command))
         .layer(middleware::from_fn_with_state(
             app_state.clone(),
             require_permission(

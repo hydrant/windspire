@@ -1,3 +1,13 @@
+### Get all boats (paginated)
+
+GET http://localhost:8080/boats
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMTk2NDA4MS00ZmJmLTc0N2EtYWU2NC1kMTcwMzBmYzNkY2MiLCJlbWFpbCI6Im92ZXN0b2VyaG9sdEBnbWFpbC5jb20iLCJuYW1lIjoiT3ZlIFN0w7hyaG9sdCIsInBpY3R1cmUiOm51bGwsInJvbGVzIjpbImFkbWluIl0sInBlcm1pc3Npb25zIjpbImFkbWluOndyaXRlIiwiYm9hdHM6cmVhZCJdLCJpYXQiOjE3NTI3NTIwNzYsImV4cCI6MTc1MjgzODQ3Nn0.t7GNPBahmXZlgZWKJeYLaOBa6SfjrlrKioNrCRwx63U
+
+### Get boats with pagination parameters
+
+GET http://localhost:8080/boats?page=1&limit=1
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMTk2NDA4MS00ZmJmLTc0N2EtYWU2NC1kMTcwMzBmYzNkY2MiLCJlbWFpbCI6Im92ZXN0b2VyaG9sdEBnbWFpbC5jb20iLCJuYW1lIjoiT3ZlIFN0w7hyaG9sdCIsInBpY3R1cmUiOm51bGwsInJvbGVzIjpbImFkbWluIl0sInBlcm1pc3Npb25zIjpbImFkbWluOndyaXRlIiwiYm9hdHM6cmVhZCJdLCJpYXQiOjE3NTI3NTIwNzYsImV4cCI6MTc1MjgzODQ3Nn0.t7GNPBahmXZlgZWKJeYLaOBa6SfjrlrKioNrCRwx63U
+
 ### Create new boat
 
 POST http://localhost:8080/boats
@@ -24,3 +34,20 @@ Content-Type: application/json
     "countryId": "0196407f-574a-7061-a353-03f612af0766"
 }
 
+
+### Update boat (PUT)
+PUT http://localhost:8080/boats/01964081-4fbf-747a-ae64-d17030fc3dcc
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMTk2NDA4MS00ZmJmLTc0N2EtYWU2NC1kMTcwMzBmYzNkY2MiLCJlbWFpbCI6Im92ZXN0b2VyaG9sdEBnbWFpbC5jb20iLCJuYW1lIjoiT3ZlIFN0w7hyaG9sdCIsInBpY3R1cmUiOm51bGwsInJvbGVzIjpbImFkbWluIl0sInBlcm1pc3Npb25zIjpbImFkbWluOndyaXRlIiwiYm9hdHM6cmVhZCJdLCJpYXQiOjE3NTI3NTIwNzYsImV4cCI6MTc1MjgzODQ3Nn0.t7GNPBahmXZlgZWKJeYLaOBa6SfjrlrKioNrCRwx63U
+Content-Type: application/json
+
+{
+    "name": "Updated Boat Name",
+    "brand": "Updated Brand",
+    "model": "Updated Model",
+    "sailNumber": "NOR9999",
+    "countryId": "0196407f-574a-7061-a353-03f612af0766"
+}
+
+### Delete boat (DELETE)
+DELETE http://localhost:8080/boats/01964081-4fbf-747a-ae64-d17030fc3dcc
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMTk2NDA4MS00ZmJmLTc0N2EtYWU2NC1kMTcwMzBmYzNkY2MiLCJlbWFpbCI6Im92ZXN0b2VyaG9sdEBnbWFpbC5jb20iLCJuYW1lIjoiT3ZlIFN0w7hyaG9sdCIsInBpY3R1cmUiOm51bGwsInJvbGVzIjpbImFkbWluIl0sInBlcm1pc3Npb25zIjpbImFkbWluOndyaXRlIiwiYm9hdHM6cmVhZCJdLCJpYXQiOjE3NTI3NTIwNzYsImV4cCI6MTc1MjgzODQ3Nn0.t7GNPBahmXZlgZWKJeYLaOBa6SfjrlrKioNrCRwx63U

@@ -1,3 +1,4 @@
+pub mod get_boats_query;
 pub mod get_countries_query;
 pub mod get_country_by_code_query;
 pub mod get_country_by_id_query;
