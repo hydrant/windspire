@@ -114,6 +114,48 @@
 								<span class="ml-1">{boat.model}</span>
 							</div>
 						{/if}
+
+						<!-- Owners -->
+						{#if boat.owners && boat.owners.length > 0}
+							<div class="flex items-center text-sm text-gray-600">
+								<svg
+									class="mr-2 h-4 w-4 text-gray-400"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
+									/>
+								</svg>
+								<span class="font-medium">Owners:</span>
+								<span class="ml-1">
+									{#each boat.owners as owner, index}
+										{owner.firstName} {owner.lastName}{index < boat.owners.length - 1 ? ', ' : ''}
+									{/each}
+								</span>
+							</div>
+						{:else}
+							<div class="flex items-center text-sm text-gray-500">
+								<svg
+									class="mr-2 h-4 w-4 text-gray-400"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
+									/>
+								</svg>
+								<span class="font-medium">No owners assigned</span>
+							</div>
+						{/if}
 					</div>
 
 					<div class="mt-6 flex justify-end space-x-2">

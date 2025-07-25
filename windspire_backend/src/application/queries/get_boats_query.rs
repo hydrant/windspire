@@ -17,6 +17,7 @@ use crate::{
 pub struct BoatQueryParams {
     page: Option<u32>,
     limit: Option<u32>,
+    include: Option<String>,
 }
 
 pub async fn get_boats_query(
@@ -29,11 +30,25 @@ pub async fn get_boats_query(
     };
 
     let repository = SqlxBoatRepository;
-    match repository
-        .get_paginated(&app_state.db_pool, pagination_params)
-        .await
-    {
-        Ok(result) => ok_json_response(result),
-        Err(err) => internal_server_error_json_response(err),
+    
+    // Check if owners should be included
+    let include_owners = params.include.as_deref() == Some("owners");
+    
+    if include_owners {
+        match repository
+            .get_paginated_with_owners(&app_state.db_pool, pagination_params)
+            .await
+        {
+            Ok(result) => ok_json_response(result),
+            Err(err) => internal_server_error_json_response(err),
+        }
+    } else {
+        match repository
+            .get_paginated(&app_state.db_pool, pagination_params)
+            .await
+        {
+            Ok(result) => ok_json_response(result),
+            Err(err) => internal_server_error_json_response(err),
+        }
     }
 }

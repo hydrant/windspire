@@ -3,11 +3,12 @@
 	import Navigation from '$lib/components/Navigation.svelte';
 	import LoginModal from '$lib/components/LoginModal.svelte';
 	import { onMount } from 'svelte';
+	import { userStore } from '$lib/stores/user';
 
 	let { children } = $props();
 
 	// User state - will be populated from JWT token
-	let user = $state<{ name: string; email: string; picture?: string } | null>(null);
+	let user = $state<{ id: string; name: string; email: string; picture?: string } | null>(null);
 	let isLoginModalOpen = $state(false);
 
 	// Check for existing JWT token and get user info from backend
@@ -29,19 +30,24 @@
 					console.log('User info from /auth/me:', userInfo);
 					console.log('Picture field:', userInfo.picture);
 					user = {
+						id: userInfo.id,
 						name: userInfo.name,
 						email: userInfo.email,
 						picture: userInfo.picture
 					};
+					// Update the store
+					userStore.set(user);
 				} else {
 					// Token invalid or expired, remove it
 					localStorage.removeItem('windspire_token');
 					user = null;
+					userStore.set(null);
 				}
 			} catch (error) {
 				console.log('Failed to get user info, removing token');
 				localStorage.removeItem('windspire_token');
 				user = null;
+				userStore.set(null);
 			}
 		}
 	}
@@ -65,8 +71,8 @@
 		window.addEventListener('auth-changed', handleAuthChange);
 		window.addEventListener('storage', handleStorageChange);
 		
-		// Also check periodically for token expiration
-		const interval = setInterval(checkAuthStatus, 60000); // Check every minute
+		// Also check periodically for token expiration (every 5 minutes)
+		const interval = setInterval(checkAuthStatus, 300000); // 5 minutes
 		
 		return () => {
 			window.removeEventListener('auth-changed', handleAuthChange);
@@ -152,6 +158,7 @@
 			// Always clear local state
 			localStorage.removeItem('windspire_token');
 			user = null;
+			userStore.set(null);
 			// Trigger auth change event
 			window.dispatchEvent(new CustomEvent('auth-changed'));
 		}

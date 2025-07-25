@@ -5,7 +5,19 @@
 	import type { Boat, Country, PaginatedResult } from '../../lib/api/types';
 	import BoatsList from '../../lib/components/BoatsList.svelte';
 	import BoatDrawer from '../../lib/components/BoatDrawer.svelte';
-	import ConfirmationModal from '../../lib/components/ConfirmationModal.svelte';
+	import ConfirmationDrawer from '../../lib/components/ConfirmationDrawer.svelte';
+	import { userStore } from '../../lib/stores/user';
+
+	// Get user from store
+	let user = $state($userStore);
+	
+	// Subscribe to user store changes
+	$effect(() => {
+		const unsubscribe = userStore.subscribe(value => {
+			user = value;
+		});
+		return unsubscribe;
+	});
 
 	let boats = $state<PaginatedResult<Boat> | null>(null);
 	let countries = $state<Country[]>([]);
@@ -180,12 +192,12 @@
 	onBoatCreated={handleBoatCreated}
 />
 
-<!-- Delete Confirmation Modal -->
-<ConfirmationModal
+<!-- Delete Confirmation Drawer -->
+<ConfirmationDrawer
 	isOpen={isDeleteModalOpen}
 	title="Delete Boat"
 	message={boatToDelete
-		? `Are you sure you want to delete "${boatToDelete.name}"? This action cannot be undone.`
+		? `Are you sure you want to delete "${boatToDelete.name}"?`
 		: ''}
 	confirmText="Delete"
 	cancelText="Cancel"

@@ -27,7 +27,29 @@ export interface Boat {
     model?: string;
     sailNumber?: string;
     countryId: string;
+    owners?: Owner[];
 }
+
+// Owner type for boat ownership
+export interface Owner {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone?: string;
+    countryId: string;
+    isoName?: string;
+    providerId?: string;
+    providerName?: string;
+    avatarUrl?: string;
+}
+
+// Backend response type for boats with owners
+export interface BoatWithOwners {
+    boat: Boat;
+    owners: Owner[];
+}
+
 
 export interface BoatCreate {
     name: string;
