@@ -10,10 +10,10 @@
 
 	// Get user from store
 	let user = $state($userStore);
-	
+
 	// Subscribe to user store changes
 	$effect(() => {
-		const unsubscribe = userStore.subscribe(value => {
+		const unsubscribe = userStore.subscribe((value) => {
 			user = value;
 		});
 		return unsubscribe;
@@ -109,6 +109,15 @@
 		loadBoats();
 		loadCountries();
 	});
+
+	// Reactive effect to reload boats when user authentication changes
+	$effect(() => {
+		// When user changes (login/logout), reload boats
+		if (user !== null) {
+			// User is now logged in, reload boats
+			loadBoats();
+		}
+	});
 </script>
 
 <svelte:head>
@@ -196,9 +205,7 @@
 <ConfirmationDrawer
 	isOpen={isDeleteModalOpen}
 	title="Delete Boat"
-	message={boatToDelete
-		? `Are you sure you want to delete "${boatToDelete.name}"?`
-		: ''}
+	message={boatToDelete ? `Are you sure you want to delete "${boatToDelete.name}"?` : ''}
 	confirmText="Delete"
 	cancelText="Cancel"
 	onConfirm={confirmDelete}

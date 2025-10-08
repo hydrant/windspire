@@ -2,6 +2,7 @@
 	import '../app.css';
 	import Navigation from '$lib/components/Navigation.svelte';
 	import LoginModal from '$lib/components/LoginModal.svelte';
+	import { firebaseAuth } from '$lib/firebase/auth';
 	import { onMount } from 'svelte';
 	import { userStore } from '$lib/stores/user';
 
@@ -19,10 +20,10 @@
 				// Call the /auth/me endpoint to get current user info
 				const response = await fetch('http://localhost:8080/auth/me', {
 					headers: {
-						'Authorization': `Bearer ${token}`
+						Authorization: `Bearer ${token}`
 					}
 				});
-				
+
 				if (response.ok) {
 					const userData = await response.json();
 					// Handle wrapped response from backend
@@ -55,25 +56,25 @@
 	// Initialize auth check and listen for auth changes
 	onMount(() => {
 		checkAuthStatus();
-		
+
 		// Listen for custom auth-changed events
 		const handleAuthChange = () => {
 			checkAuthStatus();
 		};
-		
+
 		// Listen for storage changes (cross-tab)
 		const handleStorageChange = (e: StorageEvent) => {
 			if (e.key === 'windspire_token') {
 				checkAuthStatus();
 			}
 		};
-		
+
 		window.addEventListener('auth-changed', handleAuthChange);
 		window.addEventListener('storage', handleStorageChange);
-		
+
 		// Also check periodically for token expiration (every 5 minutes)
 		const interval = setInterval(checkAuthStatus, 300000); // 5 minutes
-		
+
 		return () => {
 			window.removeEventListener('auth-changed', handleAuthChange);
 			window.removeEventListener('storage', handleStorageChange);
@@ -81,62 +82,76 @@
 		};
 	});
 
-	async function handleLogin() {
+	async function handleGoogleSignIn() {
 		try {
-			console.log('Testing backend connectivity...');
-			
-			// First test if backend is reachable
-			try {
-				const healthResponse = await fetch('http://localhost:8080/health');
-				console.log('Health check response:', healthResponse.status);
-				if (!healthResponse.ok) {
-					throw new Error(`Health check failed: ${healthResponse.status}`);
-				}
-			} catch (healthError) {
-				console.error('Backend health check failed:', healthError);
-				closeLoginModal();
-				alert('Backend server is not accessible. Please ensure the backend is running on port 8080.');
-				return;
-			}
+			console.log('Starting Firebase Google sign-in...');
 
-			console.log('Backend is accessible, attempting login...');
-			
-			// Get the authorization URL from backend
-			const response = await fetch('http://localhost:8080/auth/login');
-			console.log('Login response status:', response.status);
-			console.log('Login response headers:', Object.fromEntries(response.headers.entries()));
-			
-			if (response.ok) {
-				const data = await response.json();
-				console.log('Login response data:', data);
-				
-				// Check if response is wrapped in success/data structure
-				const authData = data.data || data;
-				
-				if (authData.authorization_url) {
-					// Redirect to Google OAuth
-					window.location.href = authData.authorization_url;
+			// Sign in with Google using Firebase
+			const result = await firebaseAuth.signInWithGoogle();
+			console.log('Firebase Google sign-in successful:', result);
+
+			if (result) {
+				// Get ID token and send to backend
+				const idToken = await result.user.getIdToken();
+				console.log('Got Firebase ID token, sending to backend...');
+
+				// Send token to backend for verification and session creation
+				const response = await fetch('http://localhost:8080/auth/firebase', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({ id_token: idToken })
+				});
+
+				if (response.ok) {
+					const data = await response.json();
+					console.log('Backend verification successful:', data);
+
+					if (data.success && data.data) {
+						// Store the JWT token from backend
+						localStorage.setItem('windspire_token', data.data.token);
+
+						// Trigger auth change event
+						window.dispatchEvent(new CustomEvent('auth-changed'));
+
+						closeLoginModal();
+						// Refresh user state
+						checkAuthStatus();
+					} else {
+						throw new Error(data.message || 'Authentication failed');
+					}
 				} else {
-					console.error('No authorization_url in response:', data);
-					console.error('Expected structure: { data: { authorization_url: "..." } } or { authorization_url: "..." }');
-					closeLoginModal();
-					alert('Invalid response from login service. Check backend logs for OAuth configuration.');
+					const errorText = await response.text();
+					console.error('Backend verification failed:', response.status, errorText);
+					alert(`Authentication verification failed: ${response.status} - ${errorText}`);
 				}
-			} else {
-				const errorText = await response.text();
-				console.error('Login failed:', response.status, response.statusText, errorText);
-				closeLoginModal();
-				alert(`Login service error: ${response.status} ${response.statusText}`);
 			}
-		} catch (error) {
-			console.error('Login failed:', error);
+		} catch (error: any) {
+			console.error('Google sign-in error:', error);
+
+			// Show user-friendly error message
+			let errorMessage = 'Google sign-in failed. ';
+			if (error.message) {
+				errorMessage += error.message;
+			} else {
+				errorMessage += 'Please try again or use email/password login.';
+			}
+			alert(errorMessage);
 			closeLoginModal();
-			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-			alert(`Unable to connect to login service: ${errorMessage}`);
+			alert(error.message || 'Google sign-in failed. Please try again.');
 		}
 	}
 
+	async function handleLogin() {
+		// Firebase email/password authentication is handled in the LoginForm component
+		// This callback is triggered after successful login to refresh the UI state
+		console.log('Login successful, refreshing auth status...');
+		checkAuthStatus();
+	}
+
 	function openLoginModal() {
+		console.log('Opening login modal...');
 		isLoginModalOpen = true;
 	}
 
@@ -147,11 +162,14 @@
 				await fetch('http://localhost:8080/auth/logout', {
 					method: 'POST',
 					headers: {
-						'Authorization': `Bearer ${token}`,
+						Authorization: `Bearer ${token}`,
 						'Content-Type': 'application/json'
 					}
 				});
 			}
+
+			// Also sign out from Firebase to clear any auth state
+			await firebaseAuth.signOut();
 		} catch (error) {
 			console.error('Logout failed:', error);
 		} finally {
@@ -171,7 +189,7 @@
 
 <div class="min-h-screen bg-gray-50">
 	<Navigation {user} onLogin={openLoginModal} onLogout={handleLogout} />
-	
+
 	<main>
 		{@render children()}
 	</main>
@@ -180,5 +198,6 @@
 		isOpen={isLoginModalOpen}
 		onClose={closeLoginModal}
 		onLogin={handleLogin}
+		onGoogleSignIn={handleGoogleSignIn}
 	/>
 </div>

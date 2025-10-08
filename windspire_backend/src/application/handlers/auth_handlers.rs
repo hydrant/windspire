@@ -1,9 +1,4 @@
-use axum::{
-    Json,
-    extract::{Query, State},
-    http::StatusCode,
-    response::IntoResponse,
-};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 
 use uuid::Uuid;
@@ -16,267 +11,35 @@ use crate::domain::repositories::user_repository::UserRepository;
 use crate::infrastructure::repositories::sqlx_user_repository::SqlxUserRepository;
 
 #[derive(Debug, Deserialize)]
-pub struct AuthCallbackQuery {
-    pub code: String,
-    pub state: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct AuthLoginResponse {
-    pub authorization_url: String,
-    pub state: String,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct RefreshTokenRequest {
     pub refresh_token: String,
 }
 
-// Standalone handler functions for use with Axum router
-pub async fn login_handler(
-    State(app_state): State<crate::application::state::AppState>,
-) -> impl IntoResponse {
-    tracing::info!("Starting OAuth login flow");
-
-    let auth_url = app_state.oauth_service.get_authorization_url();
-
-    let response = AuthLoginResponse {
-        authorization_url: auth_url.url,
-        state: auth_url.state,
-    };
-
-    ok_json_response(response)
+#[derive(Debug, Deserialize)]
+pub struct FirebaseAuthRequest {
+    pub id_token: String,
+    pub display_name: Option<String>, // Optional display name for registration
 }
 
-pub async fn oauth_callback_handler(
-    State(app_state): State<crate::application::state::AppState>,
-    query: Query<AuthCallbackQuery>,
-) -> impl IntoResponse {
-    tracing::info!("Processing OAuth callback with code: {}", query.code);
+#[derive(Debug, Serialize)]
+pub struct FirebaseAuthResponse {
+    pub success: bool,
+    pub data: Option<AuthTokenData>,
+    pub message: Option<String>,
+}
 
-    // Exchange authorization code for access token
-    let access_token = match app_state
-        .oauth_service
-        .exchange_code_for_token(&query.code, &query.state, &query.state)
-        .await
-    {
-        Ok(token) => token,
-        Err(e) => {
-            tracing::error!("Token exchange failed: {}", e);
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({
-                    "success": false,
-                    "message": "Failed to exchange authorization code"
-                })),
-            )
-                .into_response();
-        }
-    };
+#[derive(Debug, Serialize)]
+pub struct AuthTokenData {
+    pub token: String,
+    pub user: UserInfo,
+}
 
-    // Get user info from Google
-    let google_user = match app_state.oauth_service.get_user_info(&access_token).await {
-        Ok(user) => user,
-        Err(e) => {
-            tracing::error!("Failed to get user info: {}", e);
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({
-                    "success": false,
-                    "message": "Failed to get user information"
-                })),
-            )
-                .into_response();
-        }
-    };
-
-    let user_repository = SqlxUserRepository;
-
-    // Check if user exists by provider_id first, then fall back to email for migration
-    let existing_user = user_repository
-        .get_user_by_provider_id(&app_state.db_pool, &google_user.id, "google")
-        .await;
-
-    let user = match existing_user {
-        Ok(user_by_provider) => {
-            tracing::info!(
-                "Existing user found by provider_id: {}",
-                user_by_provider.email
-            );
-
-            // Convert UserByEmail to User-like structure for consistency
-            User {
-                id: user_by_provider.id,
-                first_name: user_by_provider.first_name,
-                last_name: user_by_provider.last_name,
-                email: user_by_provider.email,
-                phone: None, // Not available in UserByEmail
-                country_id: user_by_provider.country_id,
-                provider_id: user_by_provider.provider_id,
-                provider_name: user_by_provider.provider_name,
-                avatar_url: google_user.picture.clone(), // Use Google profile picture
-                created_at: None,                        // Not available in UserByEmail
-                updated_at: None,                        // Not available in UserByEmail
-            }
-        }
-        Err(_) => {
-            // Fallback: Check if user exists by email (for migration of existing users)
-            let existing_user_by_email = user_repository
-                .get_user_by_email(&app_state.db_pool, &google_user.email)
-                .await;
-
-            match existing_user_by_email {
-                Ok(user_by_email) => {
-                    tracing::info!(
-                        "Existing user found by email, updating provider info: {}",
-                        user_by_email.email
-                    );
-
-                    // Update OAuth provider info since this user was found by email but not provider_id
-                    if let Err(e) = user_repository
-                        .update_oauth_info(
-                            &app_state.db_pool,
-                            user_by_email.id,
-                            &google_user.id,
-                            "google",
-                        )
-                        .await
-                    {
-                        tracing::error!("Failed to update OAuth info: {}", e);
-                        return (
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            Json(serde_json::json!({
-                                "success": false,
-                                "message": "Failed to update user OAuth information"
-                            })),
-                        )
-                            .into_response();
-                    }
-
-                    // Convert UserByEmail to User-like structure for consistency
-                    User {
-                        id: user_by_email.id,
-                        first_name: user_by_email.first_name,
-                        last_name: user_by_email.last_name,
-                        email: user_by_email.email,
-                        phone: None, // Not available in UserByEmail
-                        country_id: user_by_email.country_id,
-                        provider_id: Some(google_user.id.clone()),
-                        provider_name: Some("google".to_string()),
-                        avatar_url: google_user.picture.clone(), // Use Google profile picture
-                        created_at: None,                        // Not available in UserByEmail
-                        updated_at: None,                        // Not available in UserByEmail
-                    }
-                }
-                Err(_) => {
-                    tracing::info!("Creating new user: {}", google_user.email);
-
-                    // Get default country ID
-                    let country_id = match get_default_country_id(&app_state.db_pool).await {
-                        Ok(id) => id,
-                        Err(response) => return response.into_response(),
-                    };
-
-                    // Create new user
-                    let new_user = OAuthUserCreate {
-                        email: google_user.email.clone(),
-                        first_name: google_user.given_name.clone(),
-                        last_name: google_user.family_name.clone(),
-                        provider_id: google_user.id.clone(),
-                        provider_name: "google".to_string(),
-                        avatar_url: google_user.picture.clone(),
-                        country_id,
-                    };
-
-                    match user_repository
-                        .create_oauth_user(&app_state.db_pool, &new_user)
-                        .await
-                    {
-                        Ok(created_user) => created_user,
-                        Err(e) => {
-                            tracing::error!("Failed to create user: {}", e);
-                            return (
-                                StatusCode::INTERNAL_SERVER_ERROR,
-                                Json(serde_json::json!({
-                                    "success": false,
-                                    "message": "Failed to create user account"
-                                })),
-                            )
-                                .into_response();
-                        }
-                    }
-                }
-            }
-        }
-    };
-
-    // Get user roles and permissions
-    let user_with_roles = match user_repository
-        .get_user_with_roles(&app_state.db_pool, user.id)
-        .await
-    {
-        Ok(user_with_roles) => user_with_roles,
-        Err(e) => {
-            tracing::error!("Failed to get user roles: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({
-                    "success": false,
-                    "message": "Failed to get user permissions"
-                })),
-            )
-                .into_response();
-        }
-    };
-
-    // Create AuthUser for JWT
-    let auth_user = AuthUser {
-        id: user.id,
-        email: user.email.clone(),
-        first_name: user.first_name.clone(),
-        last_name: user.last_name.clone(),
-        provider_id: user.provider_id.unwrap_or_default(),
-        provider_name: user.provider_name.unwrap_or_default(),
-        avatar_url: user.avatar_url.clone(),
-        roles: user_with_roles
-            .roles
-            .iter()
-            .map(|r| r.name.clone())
-            .collect(),
-        permissions: user_with_roles
-            .permissions
-            .iter()
-            .map(|p| p.name.clone())
-            .collect(),
-    };
-
-    // Generate JWT token
-    let jwt_token = match app_state.jwt_service.generate_token(&auth_user) {
-        Ok(token) => token,
-        Err(e) => {
-            tracing::error!("Failed to generate JWT: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({
-                    "success": false,
-                    "message": "Failed to generate authentication token"
-                })),
-            )
-                .into_response();
-        }
-    };
-
-    tracing::info!("Successfully authenticated user: {}", user.email);
-
-    // Instead of returning JSON, redirect to frontend with token
-    let frontend_url = format!("http://localhost:5173/auth/callback?token={}", jwt_token);
-
-    (
-        StatusCode::FOUND,
-        [("Location", frontend_url.as_str())],
-        "Redirecting to frontend...",
-    )
-        .into_response()
+#[derive(Debug, Serialize)]
+pub struct UserInfo {
+    pub id: String,
+    pub email: String,
+    pub name: String,
+    pub picture: Option<String>,
 }
 
 pub async fn refresh_token_handler(
@@ -373,6 +136,315 @@ pub async fn me_handler(
     });
 
     ok_json_response(user_info)
+}
+
+pub async fn firebase_auth_handler(
+    State(app_state): State<crate::application::state::AppState>,
+    Json(payload): Json<FirebaseAuthRequest>,
+) -> impl IntoResponse {
+    tracing::info!("Processing Firebase authentication");
+    tracing::info!(
+        "Received payload - display_name: {:?}",
+        payload.display_name
+    );
+
+    // Verify Firebase ID token
+    let firebase_user = match app_state
+        .firebase_service
+        .verify_id_token_unsafe(&payload.id_token)
+        .await
+    {
+        Ok(user) => user,
+        Err(e) => {
+            tracing::error!("Firebase token verification failed: {}", e);
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(FirebaseAuthResponse {
+                    success: false,
+                    data: None,
+                    message: Some("Invalid Firebase token".to_string()),
+                }),
+            )
+                .into_response();
+        }
+    };
+
+    let user_repository = SqlxUserRepository;
+
+    // Check if user exists by Firebase UID first, then fall back to email
+    let existing_user = user_repository
+        .get_user_by_provider_id(&app_state.db_pool, &firebase_user.uid, "firebase")
+        .await;
+
+    let user = match existing_user {
+        Ok(user_by_provider) => {
+            tracing::info!(
+                "Existing user found by Firebase UID: {}",
+                user_by_provider.email
+            );
+
+            // Check if we should update the user's name from display_name
+            let (first_name, last_name) = if let Some(display_name_str) = &payload.display_name {
+                if !display_name_str.trim().is_empty()
+                    && (user_by_provider.first_name == "Firebase"
+                        || user_by_provider.last_name == "User")
+                {
+                    tracing::info!(
+                        "Updating existing user's name from '{}' '{}' to '{}'",
+                        user_by_provider.first_name,
+                        user_by_provider.last_name,
+                        display_name_str
+                    );
+
+                    let name_parts: Vec<&str> = display_name_str.split_whitespace().collect();
+                    let new_first_name = name_parts.first().unwrap_or(&"Firebase").to_string();
+                    let new_last_name = name_parts
+                        .get(1..)
+                        .map(|parts| parts.join(" "))
+                        .unwrap_or_else(|| "User".to_string());
+
+                    // TODO: Update the user in the database with new names
+                    tracing::info!(
+                        "Would update user {} with first_name: '{}', last_name: '{}'",
+                        user_by_provider.id,
+                        new_first_name,
+                        new_last_name
+                    );
+
+                    (new_first_name, new_last_name)
+                } else {
+                    (
+                        user_by_provider.first_name.clone(),
+                        user_by_provider.last_name.clone(),
+                    )
+                }
+            } else {
+                (
+                    user_by_provider.first_name.clone(),
+                    user_by_provider.last_name.clone(),
+                )
+            };
+
+            User {
+                id: user_by_provider.id,
+                first_name,
+                last_name,
+                email: user_by_provider.email,
+                phone: None,
+                country_id: user_by_provider.country_id,
+                provider_id: user_by_provider.provider_id,
+                provider_name: user_by_provider.provider_name,
+                avatar_url: firebase_user.picture.clone(),
+                created_at: None,
+                updated_at: None,
+            }
+        }
+        Err(_) => {
+            // Check if user exists by email
+            let existing_user_by_email = user_repository
+                .get_user_by_email(
+                    &app_state.db_pool,
+                    &firebase_user.email.clone().unwrap_or_default(),
+                )
+                .await;
+
+            match existing_user_by_email {
+                Ok(user_by_email) => {
+                    tracing::info!(
+                        "Existing user found by email, updating Firebase info: {}",
+                        user_by_email.email
+                    );
+
+                    // Update Firebase provider info
+                    if let Err(e) = user_repository
+                        .update_oauth_info(
+                            &app_state.db_pool,
+                            user_by_email.id,
+                            &firebase_user.uid,
+                            "firebase",
+                        )
+                        .await
+                    {
+                        tracing::error!("Failed to update Firebase info: {}", e);
+                        return (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            Json(FirebaseAuthResponse {
+                                success: false,
+                                data: None,
+                                message: Some(
+                                    "Failed to update user Firebase information".to_string(),
+                                ),
+                            }),
+                        )
+                            .into_response();
+                    }
+
+                    User {
+                        id: user_by_email.id,
+                        first_name: user_by_email.first_name,
+                        last_name: user_by_email.last_name,
+                        email: user_by_email.email,
+                        phone: None,
+                        country_id: user_by_email.country_id,
+                        provider_id: Some(firebase_user.uid.clone()),
+                        provider_name: Some("firebase".to_string()),
+                        avatar_url: firebase_user.picture.clone(),
+                        created_at: None,
+                        updated_at: None,
+                    }
+                }
+                Err(_) => {
+                    tracing::info!(
+                        "Creating new user from Firebase: {}",
+                        firebase_user
+                            .email
+                            .as_ref()
+                            .unwrap_or(&"unknown".to_string())
+                    );
+
+                    // Get default country ID
+                    let country_id = match get_default_country_id(&app_state.db_pool).await {
+                        Ok(id) => id,
+                        Err(response) => return response.into_response(),
+                    };
+
+                    // Extract name parts - prefer display_name from request, fall back to Firebase token
+                    tracing::info!("Firebase user name field: {:?}", firebase_user.name);
+                    tracing::info!("Request display_name field: {:?}", payload.display_name);
+
+                    let display_name = payload
+                        .display_name
+                        .as_ref()
+                        .map(|s| s.as_str())
+                        .or_else(|| firebase_user.name.as_ref().map(|s| s.as_str()))
+                        .unwrap_or("Firebase User");
+
+                    tracing::info!("Using display_name: {}", display_name);
+
+                    let name_parts: Vec<&str> = display_name.split_whitespace().collect();
+
+                    let first_name = name_parts.first().unwrap_or(&"Firebase").to_string();
+                    let last_name = name_parts
+                        .get(1..)
+                        .map(|parts| parts.join(" "))
+                        .unwrap_or_else(|| "User".to_string());
+
+                    tracing::info!(
+                        "Parsed names - first_name: {}, last_name: {}",
+                        first_name,
+                        last_name
+                    );
+
+                    // Create new user
+                    let new_user = OAuthUserCreate {
+                        email: firebase_user
+                            .email
+                            .clone()
+                            .unwrap_or_else(|| format!("{}@firebase.local", firebase_user.uid)),
+                        first_name,
+                        last_name,
+                        provider_id: firebase_user.uid.clone(),
+                        provider_name: "firebase".to_string(),
+                        avatar_url: firebase_user.picture.clone(),
+                        country_id,
+                    };
+
+                    match user_repository
+                        .create_oauth_user(&app_state.db_pool, &new_user)
+                        .await
+                    {
+                        Ok(created_user) => created_user,
+                        Err(e) => {
+                            tracing::error!("Failed to create user: {}", e);
+                            return (
+                                StatusCode::INTERNAL_SERVER_ERROR,
+                                Json(FirebaseAuthResponse {
+                                    success: false,
+                                    data: None,
+                                    message: Some("Failed to create user account".to_string()),
+                                }),
+                            )
+                                .into_response();
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    // Get user roles and permissions
+    let user_with_roles = match user_repository
+        .get_user_with_roles(&app_state.db_pool, user.id)
+        .await
+    {
+        Ok(user_with_roles) => user_with_roles,
+        Err(e) => {
+            tracing::error!("Failed to get user roles: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(FirebaseAuthResponse {
+                    success: false,
+                    data: None,
+                    message: Some("Failed to get user permissions".to_string()),
+                }),
+            )
+                .into_response();
+        }
+    };
+
+    // Create AuthUser for JWT
+    let auth_user = AuthUser {
+        id: user.id,
+        email: user.email.clone(),
+        first_name: user.first_name.clone(),
+        last_name: user.last_name.clone(),
+        provider_id: user.provider_id.unwrap_or_default(),
+        provider_name: user.provider_name.unwrap_or_default(),
+        avatar_url: user.avatar_url.clone(),
+        roles: user_with_roles
+            .roles
+            .iter()
+            .map(|r| r.name.clone())
+            .collect(),
+        permissions: user_with_roles
+            .permissions
+            .iter()
+            .map(|p| p.name.clone())
+            .collect(),
+    };
+
+    // Generate JWT token
+    let jwt_token = match app_state.jwt_service.generate_token(&auth_user) {
+        Ok(token) => token,
+        Err(e) => {
+            tracing::error!("Failed to generate JWT token: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(FirebaseAuthResponse {
+                    success: false,
+                    data: None,
+                    message: Some("Failed to generate authentication token".to_string()),
+                }),
+            )
+                .into_response();
+        }
+    };
+
+    let response = FirebaseAuthResponse {
+        success: true,
+        data: Some(AuthTokenData {
+            token: jwt_token,
+            user: UserInfo {
+                id: user.id.to_string(),
+                email: user.email,
+                name: format!("{} {}", user.first_name, user.last_name),
+                picture: user.avatar_url,
+            },
+        }),
+        message: None,
+    };
+
+    (StatusCode::OK, Json(response)).into_response()
 }
 
 async fn get_default_country_id(
