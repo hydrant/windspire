@@ -4,19 +4,14 @@ use std::env;
 pub struct AppConfig {
     pub database_url: String,
     pub server_address: String,
-    pub oauth: OAuthConfig,
+    pub firebase: FirebaseConfig,
     pub jwt: JwtConfig,
     pub cors: CorsConfig,
 }
 
 #[derive(Debug, Clone)]
-pub struct OAuthConfig {
-    pub google_client_id: String,
-    pub google_client_secret: String,
-    pub google_redirect_uri: String,
-    pub google_auth_url: String,
-    pub google_token_url: String,
-    pub google_userinfo_url: String,
+pub struct FirebaseConfig {
+    pub project_id: String,
 }
 
 #[derive(Debug, Clone)]
@@ -38,14 +33,8 @@ impl AppConfig {
         Ok(AppConfig {
             database_url: env::var("DATABASE_URL")?,
             server_address: env::var("SERVER_ADDRESS").unwrap_or("127.0.0.1:3000".to_string()),
-            oauth: OAuthConfig {
-                google_client_id: env::var("GOOGLE_CLIENT_ID")?,
-                google_client_secret: env::var("GOOGLE_CLIENT_SECRET")?,
-                google_redirect_uri: env::var("GOOGLE_REDIRECT_URI")
-                    .unwrap_or("http://localhost:8080/auth/callback".to_string()),
-                google_auth_url: "https://accounts.google.com/o/oauth2/v2/auth".to_string(),
-                google_token_url: "https://oauth2.googleapis.com/token".to_string(),
-                google_userinfo_url: "https://www.googleapis.com/oauth2/v2/userinfo".to_string(),
+            firebase: FirebaseConfig {
+                project_id: env::var("FIREBASE_PROJECT_ID").unwrap_or("windspire-dev".to_string()),
             },
             jwt: JwtConfig {
                 secret: env::var("JWT_SECRET")?,

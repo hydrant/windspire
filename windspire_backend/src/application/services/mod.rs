@@ -1,2 +1,2 @@
+pub mod firebase_service;
 pub mod jwt_service;
-pub mod oauth_service;

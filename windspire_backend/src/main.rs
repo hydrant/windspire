@@ -1,6 +1,6 @@
 use application::approuter;
 use application::config::AppConfig;
-use application::services::{jwt_service::JwtService, oauth_service::OAuthService};
+use application::services::{jwt_service::JwtService, firebase_service::FirebaseService};
 use application::state::AppState;
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
@@ -38,12 +38,11 @@ async fn main() -> () {
     // Create JWT service
     let jwt_service = Arc::new(JwtService::new(config.jwt.clone()));
 
-    // Create OAuth service
-    let oauth_service =
-        Arc::new(OAuthService::new(config.oauth.clone()).expect("Failed to create OAuth service"));
+    // Create Firebase service
+    let firebase_service = Arc::new(FirebaseService::new(config.firebase.project_id.clone()));
 
     // Create application state
-    let app_state = AppState::new(db_pool, jwt_service, oauth_service, config.clone());
+    let app_state = AppState::new(db_pool, jwt_service, firebase_service, config.clone());
 
     // Create Axum TCP listener
     let listener = TcpListener::bind(&config.server_address)

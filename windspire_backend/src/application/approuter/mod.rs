@@ -1,5 +1,5 @@
 use crate::application::handlers::boat_owner_handlers::{
-    add_owner_to_boat, remove_owner_from_boat, get_boats_for_user, get_owners_for_boat
+    add_owner_to_boat, get_boats_for_user, get_owners_for_boat, remove_owner_from_boat,
 };
 use axum::{
     Router, middleware,
@@ -16,7 +16,8 @@ use crate::application::{
         update_user_command::update_user_command,
     },
     handlers::auth_handlers::{
-        login_handler, logout_handler, me_handler, oauth_callback_handler, refresh_token_handler,
+        firebase_auth_handler, logout_handler, me_handler,
+        refresh_token_handler,
     },
     middleware::{auth_middleware::jwt_auth_middleware, rbac_middleware::require_permission},
     queries::{
@@ -32,11 +33,14 @@ use crate::application::state::AppState;
 pub fn create_router(app_state: AppState) -> Router {
     // CORS configuration for frontend integration
     let cors = CorsLayer::new()
-        .allow_origin(
+        .allow_origin([
             "http://localhost:5173"
                 .parse::<axum::http::HeaderValue>()
                 .unwrap(),
-        )
+            "http://localhost:4173"
+                .parse::<axum::http::HeaderValue>()
+                .unwrap(),
+        ])
         .allow_methods([
             axum::http::Method::GET,
             axum::http::Method::POST,
@@ -54,8 +58,7 @@ pub fn create_router(app_state: AppState) -> Router {
     // Public routes (no authentication required)
     let public_routes = Router::new()
         .route("/health", get(|| async { "Backend is running!" }))
-        .route("/auth/login", get(login_handler))
-        .route("/auth/callback", get(oauth_callback_handler))
+        .route("/auth/firebase", post(firebase_auth_handler))
         .route("/auth/refresh", post(refresh_token_handler));
 
     // Protected routes (authentication required)
@@ -73,7 +76,10 @@ pub fn create_router(app_state: AppState) -> Router {
         )
         // Boat-owner endpoints
         .route("/boats/{boat_id}/owners/{user_id}", post(add_owner_to_boat))
-        .route("/boats/{boat_id}/owners/{user_id}", delete(remove_owner_from_boat))
+        .route(
+            "/boats/{boat_id}/owners/{user_id}",
+            delete(remove_owner_from_boat),
+        )
         .route("/users/{user_id}/boats", get(get_boats_for_user))
         .route("/boats/{boat_id}/owners", get(get_owners_for_boat))
         .layer(middleware::from_fn_with_state(
