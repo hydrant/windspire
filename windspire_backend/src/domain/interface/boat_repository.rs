@@ -4,6 +4,7 @@ use sqlx::{Error, PgPool};
 use uuid::Uuid;
 
 use crate::domain::models::boat::{Boat, BoatCreate, BoatUpdate};
+use crate::domain::models::boat_owner::BoatWithOwners;
 
 #[derive(Debug, Clone)]
 pub struct PaginationParams {
@@ -37,6 +38,12 @@ pub(crate) trait BoatRepository {
         pool: &PgPool,
         params: PaginationParams,
     ) -> Result<PaginatedResult<Boat>, Error>;
+
+    async fn get_paginated_with_owners(
+        &self,
+        pool: &PgPool,
+        params: PaginationParams,
+    ) -> Result<PaginatedResult<BoatWithOwners>, Error>;
 
     async fn insert(&self, pool: &PgPool, data: BoatCreate) -> Result<Boat, Error>;
     async fn delete(&self, pool: &PgPool, id: Uuid) -> Result<(), Error>;

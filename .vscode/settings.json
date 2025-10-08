@@ -1,0 +1,7 @@
+{
+    "workbench.editor.wrapTabs": true,
+    "editor.formatOnSave": true,
+    "rust-analyzer.linkedProjects": [
+        "windspire_backend/Cargo.toml"
+    ]
+}

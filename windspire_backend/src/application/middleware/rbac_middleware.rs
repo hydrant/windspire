@@ -70,7 +70,7 @@ async fn check_permission(
 
     // If permission allows own access, check for own-specific permission
     if required_permission.allow_own {
-        let own_permission = format!(
+        let _own_permission = format!(
             "{}_own",
             required_permission
                 .permission

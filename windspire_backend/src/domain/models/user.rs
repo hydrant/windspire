@@ -55,6 +55,7 @@ pub struct UserUpdate {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct UserWithCountry {
     pub id: Uuid,
     pub first_name: String,

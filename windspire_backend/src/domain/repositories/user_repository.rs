@@ -40,6 +40,13 @@ pub(crate) trait UserRepository {
         email: &str,
     ) -> impl Future<Output = Result<UserByEmail, Error>>;
 
+    fn get_user_by_provider_id(
+        &self,
+        pool: &PgPool,
+        provider_id: &str,
+        provider_name: &str,
+    ) -> impl Future<Output = Result<UserByEmail, Error>>;
+
     fn create_oauth_user(
         &self,
         pool: &PgPool,

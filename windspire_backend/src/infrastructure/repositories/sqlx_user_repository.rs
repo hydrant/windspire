@@ -140,6 +140,28 @@ impl UserRepository for SqlxUserRepository {
         Ok(user)
     }
 
+    async fn get_user_by_provider_id(
+        &self,
+        pool: &PgPool,
+        provider_id: &str,
+        provider_name: &str,
+    ) -> Result<UserByEmail, Error> {
+        let user = sqlx::query_as!(
+            UserByEmail,
+            r#"
+            SELECT id, email, first_name, last_name, provider_id, provider_name, country_id
+            FROM users
+            WHERE provider_id = $1 AND provider_name = $2
+            "#,
+            provider_id,
+            provider_name
+        )
+        .fetch_one(pool)
+        .await?;
+
+        Ok(user)
+    }
+
     async fn create_oauth_user(
         &self,
         pool: &PgPool,

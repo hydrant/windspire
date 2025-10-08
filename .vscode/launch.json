@@ -13,7 +13,8 @@
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=windspire_backend"
+                    "--package=windspire_backend",
+                    "--manifest-path=windspire_backend/Cargo.toml"
                 ],
                 "filter": {
                     "name": "windspire_backend",
@@ -21,7 +22,7 @@
                 }
             },
             "args": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}/windspire_backend"
         },
         {
             "type": "lldb",
@@ -31,7 +32,8 @@
                 "args": [
                     "build",
                     "--bin=windspire_backend",
-                    "--package=windspire_backend"
+                    "--package=windspire_backend",
+                    "--manifest-path=windspire_backend/Cargo.toml"
                 ],
                 "filter": {
                     "name": "windspire_backend",
@@ -39,7 +41,7 @@
                 }
             },
             "args": [],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/windspire_backend",
             "sourceMap": {},
             "initCommands": [
                 "settings set target.inline-breakpoint-strategy always",
@@ -55,7 +57,8 @@
                     "test",
                     "--no-run",
                     "--bin=windspire_backend",
-                    "--package=windspire_backend"
+                    "--package=windspire_backend",
+                    "--manifest-path=windspire_backend/Cargo.toml"
                 ],
                 "filter": {
                     "name": "windspire_backend",
@@ -63,7 +66,7 @@
                 }
             },
             "args": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}/windspire_backend"
         }
     ]
 }

@@ -1,3 +1,6 @@
+use crate::application::handlers::boat_owner_handlers::{
+    add_owner_to_boat, remove_owner_from_boat, get_boats_for_user, get_owners_for_boat
+};
 use axum::{
     Router, middleware,
     routing::{delete, get, post, put},
@@ -68,6 +71,11 @@ pub fn create_router(app_state: AppState) -> Router {
             "/countries/code/{country_code}",
             get(get_country_by_code_query),
         )
+        // Boat-owner endpoints
+        .route("/boats/{boat_id}/owners/{user_id}", post(add_owner_to_boat))
+        .route("/boats/{boat_id}/owners/{user_id}", delete(remove_owner_from_boat))
+        .route("/users/{user_id}/boats", get(get_boats_for_user))
+        .route("/boats/{boat_id}/owners", get(get_owners_for_boat))
         .layer(middleware::from_fn_with_state(
             app_state.clone(),
             jwt_auth_middleware,

@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::application::http_response::ok_json_response;
 
-use crate::domain::models::auth::{AuthUser, JwtTokenResponse};
+use crate::domain::models::auth::AuthUser;
 use crate::domain::models::user::{OAuthUserCreate, User};
 use crate::domain::repositories::user_repository::UserRepository;
 use crate::infrastructure::repositories::sqlx_user_repository::SqlxUserRepository;
@@ -92,87 +92,119 @@ pub async fn oauth_callback_handler(
 
     let user_repository = SqlxUserRepository;
 
-    // Check if user exists by email
+    // Check if user exists by provider_id first, then fall back to email for migration
     let existing_user = user_repository
-        .get_user_by_email(&app_state.db_pool, &google_user.email)
+        .get_user_by_provider_id(&app_state.db_pool, &google_user.id, "google")
         .await;
 
     let user = match existing_user {
-        Ok(user_by_email) => {
-            tracing::info!("Existing user found: {}", user_by_email.email);
-            // Update OAuth provider info if needed
-            if user_by_email.provider_id.is_none() || user_by_email.provider_name.is_none() {
-                if let Err(e) = user_repository
-                    .update_oauth_info(
-                        &app_state.db_pool,
-                        user_by_email.id,
-                        &google_user.id,
-                        "google",
-                    )
-                    .await
-                {
-                    tracing::error!("Failed to update OAuth info: {}", e);
-                    return (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(serde_json::json!({
-                            "success": false,
-                            "message": "Failed to update user OAuth information"
-                        })),
-                    )
-                        .into_response();
-                }
-            }
+        Ok(user_by_provider) => {
+            tracing::info!(
+                "Existing user found by provider_id: {}",
+                user_by_provider.email
+            );
 
             // Convert UserByEmail to User-like structure for consistency
             User {
-                id: user_by_email.id,
-                first_name: user_by_email.first_name,
-                last_name: user_by_email.last_name,
-                email: user_by_email.email,
+                id: user_by_provider.id,
+                first_name: user_by_provider.first_name,
+                last_name: user_by_provider.last_name,
+                email: user_by_provider.email,
                 phone: None, // Not available in UserByEmail
-                country_id: user_by_email.country_id,
-                provider_id: user_by_email.provider_id,
-                provider_name: user_by_email.provider_name,
+                country_id: user_by_provider.country_id,
+                provider_id: user_by_provider.provider_id,
+                provider_name: user_by_provider.provider_name,
                 avatar_url: google_user.picture.clone(), // Use Google profile picture
-                created_at: None, // Not available in UserByEmail
-                updated_at: None, // Not available in UserByEmail
+                created_at: None,                        // Not available in UserByEmail
+                updated_at: None,                        // Not available in UserByEmail
             }
         }
         Err(_) => {
-            tracing::info!("Creating new user: {}", google_user.email);
+            // Fallback: Check if user exists by email (for migration of existing users)
+            let existing_user_by_email = user_repository
+                .get_user_by_email(&app_state.db_pool, &google_user.email)
+                .await;
 
-            // Get default country ID
-            let country_id = match get_default_country_id(&app_state.db_pool).await {
-                Ok(id) => id,
-                Err(response) => return response.into_response(),
-            };
+            match existing_user_by_email {
+                Ok(user_by_email) => {
+                    tracing::info!(
+                        "Existing user found by email, updating provider info: {}",
+                        user_by_email.email
+                    );
 
-            // Create new user
-            let new_user = OAuthUserCreate {
-                email: google_user.email.clone(),
-                first_name: google_user.given_name.clone(),
-                last_name: google_user.family_name.clone(),
-                provider_id: google_user.id.clone(),
-                provider_name: "google".to_string(),
-                avatar_url: google_user.picture.clone(),
-                country_id,
-            };
+                    // Update OAuth provider info since this user was found by email but not provider_id
+                    if let Err(e) = user_repository
+                        .update_oauth_info(
+                            &app_state.db_pool,
+                            user_by_email.id,
+                            &google_user.id,
+                            "google",
+                        )
+                        .await
+                    {
+                        tracing::error!("Failed to update OAuth info: {}", e);
+                        return (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            Json(serde_json::json!({
+                                "success": false,
+                                "message": "Failed to update user OAuth information"
+                            })),
+                        )
+                            .into_response();
+                    }
 
-            match user_repository
-                .create_oauth_user(&app_state.db_pool, &new_user)
-                .await
-            {
-                Ok(created_user) => created_user,
-                Err(e) => {
-                    tracing::error!("Failed to create user: {}", e);
-                    return (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(serde_json::json!({
-                            "success": false,
-                            "message": "Failed to create user account"
-                        })),
-                    )
-                        .into_response();
+                    // Convert UserByEmail to User-like structure for consistency
+                    User {
+                        id: user_by_email.id,
+                        first_name: user_by_email.first_name,
+                        last_name: user_by_email.last_name,
+                        email: user_by_email.email,
+                        phone: None, // Not available in UserByEmail
+                        country_id: user_by_email.country_id,
+                        provider_id: Some(google_user.id.clone()),
+                        provider_name: Some("google".to_string()),
+                        avatar_url: google_user.picture.clone(), // Use Google profile picture
+                        created_at: None,                        // Not available in UserByEmail
+                        updated_at: None,                        // Not available in UserByEmail
+                    }
+                }
+                Err(_) => {
+                    tracing::info!("Creating new user: {}", google_user.email);
+
+                    // Get default country ID
+                    let country_id = match get_default_country_id(&app_state.db_pool).await {
+                        Ok(id) => id,
+                        Err(response) => return response.into_response(),
+                    };
+
+                    // Create new user
+                    let new_user = OAuthUserCreate {
+                        email: google_user.email.clone(),
+                        first_name: google_user.given_name.clone(),
+                        last_name: google_user.family_name.clone(),
+                        provider_id: google_user.id.clone(),
+                        provider_name: "google".to_string(),
+                        avatar_url: google_user.picture.clone(),
+                        country_id,
+                    };
+
+                    match user_repository
+                        .create_oauth_user(&app_state.db_pool, &new_user)
+                        .await
+                    {
+                        Ok(created_user) => created_user,
+                        Err(e) => {
+                            tracing::error!("Failed to create user: {}", e);
+                            return (
+                                StatusCode::INTERNAL_SERVER_ERROR,
+                                Json(serde_json::json!({
+                                    "success": false,
+                                    "message": "Failed to create user account"
+                                })),
+                            )
+                                .into_response();
+                        }
+                    }
                 }
             }
         }
@@ -238,12 +270,13 @@ pub async fn oauth_callback_handler(
 
     // Instead of returning JSON, redirect to frontend with token
     let frontend_url = format!("http://localhost:5173/auth/callback?token={}", jwt_token);
-    
+
     (
         StatusCode::FOUND,
         [("Location", frontend_url.as_str())],
-        "Redirecting to frontend..."
-    ).into_response()
+        "Redirecting to frontend...",
+    )
+        .into_response()
 }
 
 pub async fn refresh_token_handler(
@@ -308,7 +341,10 @@ pub async fn me_handler(
     request: axum::extract::Request,
 ) -> impl IntoResponse {
     // Extract auth context from request extensions
-    let auth_context = match request.extensions().get::<crate::domain::models::auth::AuthContext>() {
+    let auth_context = match request
+        .extensions()
+        .get::<crate::domain::models::auth::AuthContext>()
+    {
         Some(ctx) => ctx,
         None => {
             return (
@@ -317,7 +353,8 @@ pub async fn me_handler(
                     "success": false,
                     "message": "Authentication required"
                 })),
-            ).into_response();
+            )
+                .into_response();
         }
     };
 

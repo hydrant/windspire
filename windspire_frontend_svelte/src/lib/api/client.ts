@@ -31,7 +31,23 @@ class ApiClient {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            const data: ApiResponse<T> = await response.json();
+            // Check if response has content before parsing JSON
+            const contentLength = response.headers.get('content-length');
+            const contentType = response.headers.get('content-type');
+            
+            // If no content or content-length is 0, return undefined for void responses
+            if (contentLength === '0' || (!contentType?.includes('application/json') && !response.body)) {
+                return undefined as T;
+            }
+
+            // Try to get response text first to check if it's empty
+            const responseText = await response.text();
+            if (!responseText.trim()) {
+                return undefined as T;
+            }
+
+            // Parse the JSON response
+            const data: ApiResponse<T> = JSON.parse(responseText);
 
             if (!data.success) {
                 throw new Error(data.message || 'API request failed');
@@ -39,6 +55,10 @@ class ApiClient {
 
             return data.data;
         } catch (error) {
+            // If it's a JSON parsing error and we expect void, return undefined
+            if (error instanceof SyntaxError && error.message.includes('Unexpected end of JSON input')) {
+                return undefined as T;
+            }
             console.error('API request failed:', error);
             throw error;
         }

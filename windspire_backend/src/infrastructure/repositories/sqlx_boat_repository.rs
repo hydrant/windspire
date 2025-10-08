@@ -5,12 +5,14 @@ use uuid::{NoContext, Timestamp, Uuid};
 use crate::domain::{
     interface::boat_repository::{BoatRepository, PaginatedResult, PaginationParams},
     models::boat::{Boat, BoatCreate, BoatUpdate},
+    models::boat_owner::BoatWithOwners,
+    models::user::UserWithCountry,
 };
 
 pub struct SqlxBoatRepository;
 
 impl BoatRepository for SqlxBoatRepository {
-    async fn get_by_id(&self, pool: &PgPool, id: Uuid) -> Result<Boat, Error> {
+    async fn get_by_id(&self, _pool: &PgPool, _id: Uuid) -> Result<Boat, Error> {
         todo!()
     }
 
@@ -126,5 +128,66 @@ impl BoatRepository for SqlxBoatRepository {
         .await?;
 
         Ok(boat)
+    }
+
+    async fn get_paginated_with_owners(
+        &self,
+        pool: &PgPool,
+        params: PaginationParams,
+    ) -> Result<PaginatedResult<BoatWithOwners>, Error> {
+        let offset = (params.page - 1) * params.limit;
+
+        // Get total count
+        let total_result = sqlx::query!("SELECT COUNT(*) as count FROM boats")
+            .fetch_one(pool)
+            .await?;
+
+        let total = total_result.count.unwrap_or(0);
+
+        // Get paginated boats
+        let boats = sqlx::query_as!(
+            Boat,
+            r#"
+            SELECT id, name, brand, model, sail_number, country_id
+            FROM boats
+            ORDER BY name ASC
+            LIMIT $1 OFFSET $2
+            "#,
+            params.limit as i64,
+            offset as i64
+        )
+        .fetch_all(pool)
+        .await?;
+
+        // For each boat, get its owners
+        let mut boats_with_owners = Vec::new();
+        for boat in boats {
+            let owners = sqlx::query_as!(
+                UserWithCountry,
+                r#"
+                SELECT u.id, u.first_name, u.last_name, u.email, u.phone, u.country_id,
+                       c.iso_name, u.provider_id, u.provider_name, u.avatar_url
+                FROM users u
+                INNER JOIN boat_owners bo ON u.id = bo.user_id
+                LEFT JOIN countries c ON u.country_id = c.id
+                WHERE bo.boat_id = $1
+                "#,
+                boat.id
+            )
+            .fetch_all(pool)
+            .await?;
+
+            boats_with_owners.push(BoatWithOwners { boat, owners });
+        }
+
+        let total_pages = ((total as f64) / (params.limit as f64)).ceil() as u32;
+
+        Ok(PaginatedResult {
+            data: boats_with_owners,
+            total,
+            page: params.page,
+            limit: params.limit,
+            total_pages,
+        })
     }
 }
