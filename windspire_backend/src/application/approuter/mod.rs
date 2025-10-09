@@ -16,8 +16,7 @@ use crate::application::{
         update_user_command::update_user_command,
     },
     handlers::auth_handlers::{
-        firebase_auth_handler, logout_handler, me_handler,
-        refresh_token_handler,
+        firebase_auth_handler, logout_handler, me_handler, refresh_token_handler,
     },
     middleware::{auth_middleware::jwt_auth_middleware, rbac_middleware::require_permission},
     queries::{
@@ -31,28 +30,35 @@ use crate::application::{
 use crate::application::state::AppState;
 
 pub fn create_router(app_state: AppState) -> Router {
-    // CORS configuration for frontend integration
+    // CORS configuration from environment/config
+    let cors_origins: Vec<axum::http::HeaderValue> = app_state
+        .config
+        .cors
+        .allowed_origins
+        .iter()
+        .filter_map(|origin| origin.parse().ok())
+        .collect();
+
+    let cors_methods: Vec<axum::http::Method> = app_state
+        .config
+        .cors
+        .allowed_methods
+        .iter()
+        .filter_map(|method| method.parse().ok())
+        .collect();
+
+    let cors_headers: Vec<axum::http::HeaderName> = app_state
+        .config
+        .cors
+        .allowed_headers
+        .iter()
+        .filter_map(|header| header.parse().ok())
+        .collect();
+
     let cors = CorsLayer::new()
-        .allow_origin([
-            "http://localhost:5173"
-                .parse::<axum::http::HeaderValue>()
-                .unwrap(),
-            "http://localhost:4173"
-                .parse::<axum::http::HeaderValue>()
-                .unwrap(),
-        ])
-        .allow_methods([
-            axum::http::Method::GET,
-            axum::http::Method::POST,
-            axum::http::Method::PUT,
-            axum::http::Method::DELETE,
-            axum::http::Method::OPTIONS,
-        ])
-        .allow_headers([
-            axum::http::header::AUTHORIZATION,
-            axum::http::header::CONTENT_TYPE,
-            axum::http::header::ACCEPT,
-        ])
+        .allow_origin(cors_origins)
+        .allow_methods(cors_methods)
+        .allow_headers(cors_headers)
         .allow_credentials(false);
 
     // Public routes (no authentication required)
@@ -111,11 +117,14 @@ pub fn create_router(app_state: AppState) -> Router {
             jwt_auth_middleware,
         ));
 
-    // Combine all routes
-    Router::new()
+    // Combine all routes with /api prefix for consistency between cargo run and func start
+    let api_routes = Router::new()
         .merge(public_routes)
         .merge(protected_routes)
-        .merge(admin_routes)
+        .merge(admin_routes);
+
+    Router::new()
+        .nest("/api", api_routes)
         .layer(cors)
         .with_state(app_state)
 }

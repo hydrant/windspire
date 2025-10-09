@@ -1,0 +1,23 @@
+{
+    "version": "2.0",
+    "logging": {
+        "applicationInsights": {
+            "samplingSettings": {
+                "isEnabled": true,
+                "excludedTypes": "Request"
+            }
+        }
+    },
+    "customHandler": {
+        "description": {
+            "defaultExecutablePath": "target/release/windspire_backend",
+            "workingDirectory": "",
+            "arguments": []
+        },
+        "enableForwardingHttpRequest": true
+    },
+    "extensionBundle": {
+        "id": "Microsoft.Azure.Functions.ExtensionBundle",
+        "version": "[3.*, 4.0.0)"
+    }
+}

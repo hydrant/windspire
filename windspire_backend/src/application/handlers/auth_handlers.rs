@@ -149,10 +149,22 @@ pub async fn firebase_auth_handler(
     );
 
     // Verify Firebase ID token
-    let firebase_user = match app_state
-        .firebase_service
-        .verify_id_token_unsafe(&payload.id_token)
-        .await
+    let firebase_user = match {
+        #[cfg(debug_assertions)]
+        {
+            app_state
+                .firebase_service
+                .verify_id_token_unsafe(&payload.id_token)
+                .await
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            app_state
+                .firebase_service
+                .verify_id_token(&payload.id_token)
+                .await
+        }
+    }
     {
         Ok(user) => user,
         Err(e) => {
