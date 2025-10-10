@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'pnpm'
-          cache-dependency-path: windspire_frontend_svelte/pnpm-lock.yaml
+          cache-dependency-path: windspire_frontend_svelte_csr/pnpm-lock.yaml
 
       # Set up Rust for backend build
       - name: Set up Rust
@@ -56,13 +56,13 @@ jobs:
       # Install frontend dependencies
       - name: Install frontend dependencies
         run: |
-          cd windspire_frontend_svelte
+          cd windspire_frontend_svelte_csr
           pnpm install
 
       # Build frontend for static hosting
       - name: Build frontend
         run: |
-          cd windspire_frontend_svelte
+          cd windspire_frontend_svelte_csr
           pnpm build
         env:
           VITE_API_BASE_URL: https://your-app-name.azurestaticapps.net/api
@@ -201,7 +201,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
           ###### Repository/Build Configurations ######
-          app_location: "windspire_frontend_svelte/build"
+          app_location: "windspire_frontend_svelte_csr/dist"
           api_location: "windspire_backend/api"
           output_location: ""
           ###### Environment Variables ######
