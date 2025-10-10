@@ -56,6 +56,12 @@ jobs:
           cd windspire_frontend_svelte_csr
           npm run lint || echo "No lint script configured"
 
+      # Type check frontend
+      - name: Type check frontend
+        run: |
+          cd windspire_frontend_svelte_csr
+          npm run check || echo "No check script configured"
+
       # Build frontend
       - name: Build frontend
         run: |

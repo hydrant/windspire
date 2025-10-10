@@ -13,7 +13,8 @@ export default defineConfig({
         rollupOptions: {
             output: {
                 manualChunks: {
-                    vendor: ['svelte', 'firebase'],
+                    vendor: ['svelte'],
+                    firebase: ['firebase/app', 'firebase/auth'],
                     router: ['@mateothegreat/svelte5-router']
                 }
             }
