@@ -9,6 +9,7 @@ use tower_http::cors::CorsLayer;
 
 use crate::application::{
     commands::{
+        create_user_boat_command::create_user_boat_command,
         delete_boat_command::delete_boat_command, delete_country_command::delete_country_command,
         delete_user_command::delete_user_command, insert_boat_command::insert_boat_command,
         insert_country_command::insert_country_command, insert_user_command::insert_user_command,
@@ -18,7 +19,10 @@ use crate::application::{
     handlers::auth_handlers::{
         firebase_auth_handler, logout_handler, me_handler, refresh_token_handler,
     },
-    middleware::{auth_middleware::jwt_auth_middleware, rbac_middleware::require_permission},
+    middleware::{
+        auth_middleware::jwt_auth_middleware,
+        rbac_middleware::{require_boats_write, require_permission},
+    },
     queries::{
         get_boats_query::get_boats_query, get_countries_query::get_countries_query,
         get_country_by_code_query::get_country_by_code_query,
@@ -74,6 +78,7 @@ pub fn create_router(app_state: AppState) -> Router {
         .route("/users", get(get_users_query))
         .route("/users/{user_id}", get(get_user_by_id_query))
         .route("/boats", get(get_boats_query))
+        .route("/boats/my", post(create_user_boat_command)) // User boat creation
         .route("/countries", get(get_countries_query))
         .route("/countries/{country_id}", get(get_country_by_id_query))
         .route(
@@ -101,9 +106,6 @@ pub fn create_router(app_state: AppState) -> Router {
         .route("/countries", post(insert_country_command))
         .route("/countries/{country_id}", put(update_country_command))
         .route("/countries/{country_id}", delete(delete_country_command))
-        .route("/boats", post(insert_boat_command))
-        .route("/boats/{boat_id}", put(update_boat_command))
-        .route("/boats/{boat_id}", delete(delete_boat_command))
         .layer(middleware::from_fn_with_state(
             app_state.clone(),
             require_permission(
@@ -117,11 +119,26 @@ pub fn create_router(app_state: AppState) -> Router {
             jwt_auth_middleware,
         ));
 
+    // Boat management routes (authentication + boat permissions required)
+    let boat_routes = Router::new()
+        .route("/boats", post(insert_boat_command))
+        .route("/boats/{boat_id}", put(update_boat_command))
+        .route("/boats/{boat_id}", delete(delete_boat_command))
+        .layer(middleware::from_fn_with_state(
+            app_state.clone(),
+            require_boats_write(),
+        ))
+        .layer(middleware::from_fn_with_state(
+            app_state.clone(),
+            jwt_auth_middleware,
+        ));
+
     // Combine all routes with /api prefix for consistency between cargo run and func start
     let api_routes = Router::new()
         .merge(public_routes)
         .merge(protected_routes)
-        .merge(admin_routes);
+        .merge(admin_routes)
+        .merge(boat_routes);
 
     Router::new()
         .nest("/api", api_routes)
