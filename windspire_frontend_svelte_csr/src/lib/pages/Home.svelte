@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { config } from '../config';
 	import { route } from '@mateothegreat/svelte5-router';
+	import { userStore } from '../stores/user';
+
+	function handleSignIn() {
+		// Dispatch a custom event that App.svelte can listen for
+		window.dispatchEvent(new CustomEvent('open-login-modal'));
+	}
 </script>
 
 <!-- Hero Section -->
@@ -14,20 +20,38 @@
 				Modern boat management platform for marinas, yacht clubs, and boat owners
 			</p>
 			<div class="space-x-4">
-				<a
-					href="/boats"
-					use:route
-					class="rounded-lg bg-white px-8 py-3 font-semibold text-blue-600 transition-colors duration-200 hover:bg-blue-50"
-				>
-					View Boats
-				</a>
-				<a
-					href="/auth"
-					use:route
-					class="rounded-lg border border-white px-8 py-3 font-semibold text-white transition-colors duration-200 hover:bg-white hover:text-blue-600"
-				>
-					Get Started
-				</a>
+				{#if $userStore}
+					<!-- Logged in user buttons -->
+					<a
+						href="/boats"
+						use:route
+						class="rounded-lg bg-white px-8 py-3 font-semibold text-blue-600 transition-colors duration-200 hover:bg-blue-50"
+					>
+						View Boats
+					</a>
+					<a
+						href="/users/{$userStore.id}"
+						use:route
+						class="rounded-lg border border-white px-8 py-3 font-semibold text-white transition-colors duration-200 hover:bg-white hover:text-blue-600"
+					>
+						My Profile
+					</a>
+				{:else}
+					<!-- Not logged in buttons -->
+					<button
+						onclick={handleSignIn}
+						class="rounded-lg bg-white px-8 py-3 font-semibold text-blue-600 transition-colors duration-200 hover:bg-blue-50"
+					>
+						Sign In
+					</button>
+					<a
+						href="/auth"
+						use:route
+						class="rounded-lg border border-white px-8 py-3 font-semibold text-white transition-colors duration-200 hover:bg-white hover:text-blue-600"
+					>
+						Learn More
+					</a>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -106,25 +130,49 @@
 <!-- Call to Action Section -->
 <section class="bg-gray-100 py-16">
 	<div class="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
-		<h2 class="mb-4 text-3xl font-bold text-gray-900">Ready to Get Started?</h2>
-		<p class="mx-auto mb-8 max-w-2xl text-lg text-gray-600">
-			Join thousands of satisfied customers who trust {config.APP_NAME} for their boat management needs.
-		</p>
-		<div class="space-x-4">
-			<a
-				href="/auth"
-				use:route
-				class="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors duration-200 hover:bg-blue-700"
-			>
-				Contact Us
-			</a>
-			<a
-				href="/boats"
-				use:route
-				class="rounded-lg border border-blue-600 px-6 py-3 font-semibold text-blue-600 transition-colors duration-200 hover:bg-blue-600 hover:text-white"
-			>
-				Learn More
-			</a>
-		</div>
+		{#if $userStore}
+			<!-- Logged in user CTA -->
+			<h2 class="mb-4 text-3xl font-bold text-gray-900">Welcome back, {$userStore.name}!</h2>
+			<p class="mx-auto mb-8 max-w-2xl text-lg text-gray-600">
+				Ready to manage your boats? View your fleet or explore all boats in the system.
+			</p>
+			<div class="space-x-4">
+				<a
+					href="/users/{$userStore.id}"
+					use:route
+					class="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors duration-200 hover:bg-blue-700"
+				>
+					My Profile
+				</a>
+				<a
+					href="/boats"
+					use:route
+					class="rounded-lg border border-blue-600 px-6 py-3 font-semibold text-blue-600 transition-colors duration-200 hover:bg-blue-600 hover:text-white"
+				>
+					View All Boats
+				</a>
+			</div>
+		{:else}
+			<!-- Not logged in CTA -->
+			<h2 class="mb-4 text-3xl font-bold text-gray-900">Ready to Get Started?</h2>
+			<p class="mx-auto mb-8 max-w-2xl text-lg text-gray-600">
+				Join thousands of satisfied customers who trust {config.APP_NAME} for their boat management needs.
+			</p>
+			<div class="space-x-4">
+				<button
+					onclick={handleSignIn}
+					class="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors duration-200 hover:bg-blue-700"
+				>
+					Sign In
+				</button>
+				<a
+					href="/auth"
+					use:route
+					class="rounded-lg border border-blue-600 px-6 py-3 font-semibold text-blue-600 transition-colors duration-200 hover:bg-blue-600 hover:text-white"
+				>
+					Learn More
+				</a>
+			</div>
+		{/if}
 	</div>
 </section>

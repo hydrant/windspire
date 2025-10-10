@@ -95,6 +95,30 @@ export class FirebaseAuthService {
     }
 
     /**
+     * Sign up with email, password, and display name
+     */
+    async signUpWithEmailAndPassword(email: string, password: string, displayName: string): Promise<UserCredential> {
+        if (!auth) {
+            throw new Error('Firebase authentication is not available.');
+        }
+
+        try {
+            // Create user account
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+            // Update user profile with display name
+            if (displayName && userCredential.user) {
+                await updateProfile(userCredential.user, { displayName });
+            }
+
+            return userCredential;
+        } catch (error: any) {
+            console.error('User creation error:', error);
+            throw new Error(`Account creation failed: ${error.message}`);
+        }
+    }
+
+    /**
      * Send password reset email
      */
     async sendPasswordResetEmail(email: string): Promise<void> {

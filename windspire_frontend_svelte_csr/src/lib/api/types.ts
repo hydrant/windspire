@@ -44,6 +44,13 @@ export interface Owner {
     avatarUrl?: string;
 }
 
+// User profile with boats
+export interface UserProfile {
+    user: Owner;
+    boats: Boat[];
+    boat_count: number;
+}
+
 // Backend response type for boats with owners
 export interface BoatWithOwners {
     boat: Boat;

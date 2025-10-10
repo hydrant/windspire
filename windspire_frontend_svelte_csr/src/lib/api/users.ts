@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Owner, PaginatedResult, PaginationParams } from './types';
+import type { Owner, PaginatedResult, PaginationParams, UserProfile } from './types';
 
 export class UsersApi {
     async getUsers(params: PaginationParams = {}): Promise<Owner[]> {
@@ -23,7 +23,7 @@ export class UsersApi {
             // For now, get all users and filter client-side
             // In a real app, you'd want server-side search
             const users = await this.getUsers({ limit: 100 });
-            
+
             if (!users || !Array.isArray(users)) {
                 console.warn('No user data received from API');
                 return [];
@@ -47,6 +47,10 @@ export class UsersApi {
 
     async getUserById(id: string): Promise<Owner> {
         return apiClient.get<Owner>(`/users/${id}`);
+    }
+
+    async getUserProfile(id: string): Promise<UserProfile> {
+        return apiClient.get<UserProfile>(`/users/${id}/profile`);
     }
 }
 

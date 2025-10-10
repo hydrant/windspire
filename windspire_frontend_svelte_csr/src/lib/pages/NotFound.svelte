@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { route } from '@mateothegreat/svelte5-router';
+
+	console.log('NotFound component loaded - current URL:', window.location.href);
 </script>
 
 <div class="mx-auto max-w-4xl px-4 py-16 text-center">

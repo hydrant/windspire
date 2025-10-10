@@ -43,7 +43,7 @@
 
 <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 	<div class="mb-8 flex items-center justify-between">
-		<h1 class="text-3xl font-bold text-gray-900">Boats</h1>
+		<h1 class="text-3xl font-bold text-gray-900">All Boats</h1>
 		{#if $userStore}
 			<button
 				onclick={openBoatModal}
@@ -128,6 +128,25 @@
 								<div class="flex items-center">
 									<span class="font-medium">Sail Number:</span>
 									<span class="ml-1">{boat.sailNumber}</span>
+								</div>
+							{/if}
+							{#if boat.owners && boat.owners.length > 0}
+								<div class="flex items-start">
+									<span class="font-medium">Owners:</span>
+									<div class="ml-1 flex flex-wrap gap-1">
+										{#each boat.owners as owner}
+											<button
+												onclick={() => (window.location.href = `/users/${owner.id}`)}
+												class="text-blue-600 hover:text-blue-800 hover:underline"
+											>
+												{owner.firstName}
+												{owner.lastName}
+											</button>
+											{#if boat.owners.indexOf(owner) < boat.owners.length - 1}
+												<span class="text-gray-400">,</span>
+											{/if}
+										{/each}
+									</div>
 								</div>
 							{/if}
 						</div>

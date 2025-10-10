@@ -41,6 +41,10 @@ export class BoatsApi {
         };
     }
 
+    async getMyBoats(): Promise<Boat[]> {
+        return apiClient.get<Boat[]>('/boats/my');
+    }
+
     async getBoat(id: string): Promise<Boat> {
         return apiClient.get<Boat>(`/boats/${id}`);
     }
