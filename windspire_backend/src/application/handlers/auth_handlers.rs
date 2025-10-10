@@ -164,8 +164,7 @@ pub async fn firebase_auth_handler(
                 .verify_id_token(&payload.id_token)
                 .await
         }
-    }
-    {
+    } {
         Ok(user) => user,
         Err(e) => {
             tracing::error!("Firebase token verification failed: {}", e);
@@ -215,13 +214,43 @@ pub async fn firebase_auth_handler(
                         .map(|parts| parts.join(" "))
                         .unwrap_or_else(|| "User".to_string());
 
-                    // TODO: Update the user in the database with new names
+                    // Update the user in the database with new names
                     tracing::info!(
-                        "Would update user {} with first_name: '{}', last_name: '{}'",
+                        "Updating user {} with first_name: '{}', last_name: '{}'",
                         user_by_provider.id,
                         new_first_name,
                         new_last_name
                     );
+
+                    // Get the full user data first to preserve all fields
+                    match user_repository
+                        .get_user_by_id(&app_state.db_pool, user_by_provider.id)
+                        .await
+                    {
+                        Ok(full_user) => {
+                            // Create user update with new names but keeping existing data
+                            let user_update = crate::domain::models::user::UserUpdate {
+                                first_name: new_first_name.clone(),
+                                last_name: new_last_name.clone(),
+                                email: full_user.email,
+                                phone: full_user.phone,
+                                country_id: full_user.country_id,
+                            };
+
+                            // Update the user in the database
+                            if let Err(e) = user_repository
+                                .update_user(&app_state.db_pool, user_by_provider.id, user_update)
+                                .await
+                            {
+                                tracing::error!("Failed to update user names: {}", e);
+                            } else {
+                                tracing::info!("Successfully updated user names in database");
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to get full user data for update: {}", e);
+                        }
+                    }
 
                     (new_first_name, new_last_name)
                 } else {

@@ -26,8 +26,9 @@ use crate::application::{
     queries::{
         get_boats_query::get_boats_query, get_countries_query::get_countries_query,
         get_country_by_code_query::get_country_by_code_query,
-        get_country_by_id_query::get_country_by_id_query,
-        get_user_by_id_query::get_user_by_id_query, get_users_query::get_users_query,
+        get_country_by_id_query::get_country_by_id_query, get_my_boats_query::get_my_boats_query,
+        get_user_by_id_query::get_user_by_id_query, get_user_profile_query::get_user_profile_query,
+        get_users_query::get_users_query,
     },
 };
 
@@ -77,7 +78,9 @@ pub fn create_router(app_state: AppState) -> Router {
         .route("/auth/me", get(me_handler))
         .route("/users", get(get_users_query))
         .route("/users/{user_id}", get(get_user_by_id_query))
+        .route("/users/{user_id}/profile", get(get_user_profile_query))
         .route("/boats", get(get_boats_query))
+        .route("/boats/my", get(get_my_boats_query)) // Get user's boats
         .route("/boats/my", post(create_user_boat_command)) // User boat creation
         .route("/countries", get(get_countries_query))
         .route("/countries/{country_id}", get(get_country_by_id_query))
