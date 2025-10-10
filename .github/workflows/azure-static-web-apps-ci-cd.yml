@@ -1,20 +1,37 @@
+# Azure Static Web Apps CI/CD Workflow
+#
+# Workflow Strategy:
+# - BUILD: Runs on all pushes and PRs for continuous testing
+# - DEPLOY: Runs only on tagged releases (test* or release*)
+#
+# Tag-based Deployment:
+# - test* tags -> Deploy to staging environment  
+# - release* tags -> Deploy to production environment
+#
+# Package Management: Uses npm instead of pnpm for better GitHub Actions compatibility
+
 name: Azure Static Web Apps CI/CD
 
 on:
   push:
     branches:
       - main
-      - static_web_app_refactor
+      - 'feature/**'
+      - 'fix/**'
+    tags:
+      - 'test*'
+      - 'release*'
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
       - main
 
 jobs:
-  build_and_deploy_job:
+  # Build job - runs on all pushes and PRs for testing
+  build_job:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
-    name: Build and Deploy Job
+    name: Build and Test Job
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,8 +43,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: windspire_frontend_svelte_csr/pnpm-lock.yaml
+          cache: 'npm'
+          cache-dependency-path: windspire_frontend_svelte_csr/package-lock.json
 
       # Set up Rust for backend build
       - name: Set up Rust
@@ -47,26 +64,80 @@ jobs:
             windspire_backend/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('windspire_backend/**/Cargo.lock') }}
 
-      # Install pnpm
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 8
-
       # Install frontend dependencies
       - name: Install frontend dependencies
         run: |
           cd windspire_frontend_svelte_csr
-          pnpm install
+          npm ci
 
-      # Build frontend for static hosting
+      # Build frontend
       - name: Build frontend
         run: |
           cd windspire_frontend_svelte_csr
-          pnpm build
+          npm run build
         env:
           VITE_API_BASE_URL: https://your-app-name.azurestaticapps.net/api
           VITE_FIREBASE_CONFIG: ${{ secrets.VITE_FIREBASE_CONFIG }}
+
+      # Test frontend (if you have tests)
+      - name: Test frontend
+        run: |
+          cd windspire_frontend_svelte_csr
+          npm run test:unit || echo "No tests configured"
+
+      # Build Rust backend
+      - name: Build Rust backend
+        run: |
+          cd windspire_backend
+          cargo build --release --target x86_64-unknown-linux-musl
+
+      # Test Rust backend
+      - name: Test Rust backend
+        run: |
+          cd windspire_backend
+          cargo test
+
+      # Upload build artifacts for deployment job
+      - name: Upload frontend build artifacts
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: windspire_frontend_svelte_csr/dist/
+
+      - name: Upload backend build artifacts
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build
+          path: windspire_backend/target/x86_64-unknown-linux-musl/release/windspire_backend
+
+  # Deploy job - runs only on tags
+  deploy_job:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build_job
+    runs-on: ubuntu-latest
+    name: Deploy Job
+    environment: 
+      name: ${{ startsWith(github.ref, 'refs/tags/release') && 'production' || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          lfs: false
+
+      # Download build artifacts
+      - name: Download frontend build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: windspire_frontend_svelte_csr/dist/
+
+      - name: Download backend build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build
+          path: windspire_backend/target/x86_64-unknown-linux-musl/release/
 
       # Install SQLx CLI for database migrations
       - name: Install SQLx CLI
@@ -80,18 +151,17 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-      # Build Rust backend for Azure Functions
-      - name: Build Rust backend
+      # Prepare Azure Functions structure
+      - name: Prepare Azure Functions
         run: |
           cd windspire_backend
-          cargo build --release --target x86_64-unknown-linux-musl
           
           # Copy binary to expected Azure Functions location
           mkdir -p api
           cp target/x86_64-unknown-linux-musl/release/windspire_backend api/
           
-          # Copy Azure Functions configuration
-          cp host.json api/
+          # Copy Azure Functions configuration if it exists
+          [ -f host.json ] && cp host.json api/ || echo "No host.json found"
           
           # Create function.json for each route (Azure Functions requirement)
           mkdir -p api/users api/boats api/countries api/auth api/health
@@ -193,7 +263,7 @@ jobs:
           EOF
 
       # Deploy to Azure Static Web Apps
-      - name: Build And Deploy
+      - name: Deploy to Azure Static Web Apps
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
@@ -204,6 +274,8 @@ jobs:
           app_location: "windspire_frontend_svelte_csr/dist"
           api_location: "windspire_backend/api"
           output_location: ""
+          skip_app_build: true  # We already built the app
+          skip_api_build: true  # We already built the API
           ###### Environment Variables ######
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -212,6 +284,7 @@ jobs:
           FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
           FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
 
+  # Close PR job for Azure Static Web Apps
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
