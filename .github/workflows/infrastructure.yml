@@ -85,7 +85,10 @@ jobs:
         # Update the Azure Static Web Apps deployment token
         echo "${{ steps.deploy.outputs.deploymentToken }}" | gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN
         
-        # Update other environment-specific secrets
+        # Update the Static Web App URL for frontend builds
+        echo "https://${{ steps.deploy.outputs.staticWebAppUrl }}" | gh secret set AZURE_STATIC_WEB_APP_URL
+        
+        # Keep legacy secret name for backward compatibility
         echo "https://${{ steps.deploy.outputs.staticWebAppUrl }}" | gh secret set STATIC_WEB_APP_URL
 
     - name: Output deployment results
