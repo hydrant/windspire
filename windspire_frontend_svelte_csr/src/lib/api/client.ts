@@ -21,13 +21,32 @@ class ApiClient {
             const response = await fetch(url, config_opts);
 
             if (!response.ok) {
+                // Try to get error details from response body
+                let errorMessage = `HTTP error! status: ${response.status}`;
+                try {
+                    const errorText = await response.text();
+                    if (errorText) {
+                        try {
+                            const errorData = JSON.parse(errorText);
+                            errorMessage = errorData.message || errorData.error || errorMessage;
+                        } catch {
+                            // If not JSON, use the text directly
+                            errorMessage = errorText || errorMessage;
+                        }
+                    }
+                } catch {
+                    // If we can't read the response, stick with the status error
+                }
+
                 if (response.status === 401) {
                     // Token expired or invalid, remove it
                     localStorage.removeItem('windspire_token');
                     window.dispatchEvent(new CustomEvent('auth-changed'));
                     throw new Error('Authentication required');
                 }
-                throw new Error(`HTTP error! status: ${response.status}`);
+
+                console.error(`API Error (${response.status}):`, errorMessage);
+                throw new Error(errorMessage);
             }
 
             // Check if response has content before parsing JSON

@@ -20,7 +20,7 @@ export class BoatsApi {
         if (params.limit) {
             searchParams.append('limit', params.limit.toString());
         }
-        
+
         // Include owners in the response
         searchParams.append('include', 'owners');
 
@@ -28,7 +28,7 @@ export class BoatsApi {
         const endpoint = query ? `/boats?${query}` : '/boats?include=owners';
 
         const result = await apiClient.get<PaginatedResult<BoatWithOwners>>(endpoint);
-        
+
         // Transform BoatWithOwners[] to Boat[] with owners property
         const transformedData: Boat[] = result.data.map(boatWithOwners => ({
             ...boatWithOwners.boat,
@@ -46,7 +46,7 @@ export class BoatsApi {
     }
 
     async createBoat(boat: BoatCreate): Promise<Boat> {
-        return apiClient.post<Boat>('/boats', boat);
+        return apiClient.post<Boat>('/boats/my', boat);
     }
 
     async updateBoat(id: string, boat: BoatUpdate): Promise<Boat> {

@@ -2,13 +2,30 @@
 	import { onMount } from 'svelte';
 	import { boatsApi, type Boat } from '../api';
 	import { userStore } from '../stores/user';
+	import BoatDrawer from '../components/BoatDrawer.svelte';
 
 	let boats = $state<Boat[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let isBoatDrawerOpen = $state(false);
 
-	onMount(async () => {
+	function openBoatModal() {
+		isBoatDrawerOpen = true;
+	}
+
+	function closeBoatModal() {
+		isBoatDrawerOpen = false;
+	}
+
+	async function handleBoatCreated() {
+		// Refresh the boats list after creating a new boat
+		await loadBoats();
+	}
+
+	async function loadBoats() {
 		try {
+			loading = true;
+			error = null;
 			const result = await boatsApi.getBoats();
 			// Handle the paginated result
 			boats = Array.isArray(result) ? result : result.data || [];
@@ -17,6 +34,10 @@
 		} finally {
 			loading = false;
 		}
+	}
+
+	onMount(async () => {
+		await loadBoats();
 	});
 </script>
 
@@ -25,6 +46,7 @@
 		<h1 class="text-3xl font-bold text-gray-900">Boats</h1>
 		{#if $userStore}
 			<button
+				onclick={openBoatModal}
 				class="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors duration-200 hover:bg-blue-700"
 			>
 				Add Boat
@@ -72,6 +94,7 @@
 			<p class="mb-4 text-gray-600">Get started by adding your first boat to the system.</p>
 			{#if $userStore}
 				<button
+					onclick={openBoatModal}
 					class="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors duration-200 hover:bg-blue-700"
 				>
 					Add Your First Boat
@@ -133,3 +156,6 @@
 		</div>
 	{/if}
 </div>
+
+<!-- Boat Creation Drawer -->
+<BoatDrawer isOpen={isBoatDrawerOpen} onClose={closeBoatModal} onBoatCreated={handleBoatCreated} />
