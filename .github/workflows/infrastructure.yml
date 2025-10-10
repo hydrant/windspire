@@ -2,14 +2,10 @@ name: Infrastructure Deployment
 
 on:
   push:
-    branches: [ main ]
-    paths:
-      - 'infrastructure/**'
-      - '.github/workflows/infrastructure.yml'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'infrastructure/**'
+    tags:
+      - 'dev*'
+      - 'staging*'
+      - 'prod*'
   workflow_dispatch:
     inputs:
       environment:
@@ -28,6 +24,7 @@ permissions:
 
 jobs:
   validate:
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -51,8 +48,8 @@ jobs:
   deploy:
     needs: validate
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-    environment: ${{ github.event.inputs.environment || 'dev' }}
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    environment: ${{ github.event.inputs.environment || (startsWith(github.ref, 'refs/tags/prod') && 'prod' || startsWith(github.ref, 'refs/tags/staging') && 'staging' || 'dev') }}
     
     steps:
     - uses: actions/checkout@v4

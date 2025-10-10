@@ -18,8 +18,9 @@ on:
       - 'windspire_frontend_svelte_csr/**'
       - '.github/workflows/frontend-ci-cd.yml'
     tags:
-      - 'test*'
-      - 'release*'
+      - 'dev*'
+      - 'staging*'
+      - 'prod*'
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
@@ -92,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Deploy Frontend
     environment: 
-      name: ${{ startsWith(github.ref, 'refs/tags/release') && 'production' || 'staging' }}
+      name: ${{ startsWith(github.ref, 'refs/tags/prod') && 'production' || startsWith(github.ref, 'refs/tags/staging') && 'staging' || 'development' }}
     steps:
       - uses: actions/checkout@v4
 
