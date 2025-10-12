@@ -60,7 +60,7 @@
 {#if isOpen}
 	<!-- Modal backdrop -->
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-gray-600 bg-opacity-50"
+		class="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-gray-600"
 		onclick={handleBackdropClick}
 	>
 		<!-- Modal container -->
@@ -93,13 +93,13 @@
 					<div class="mt-4 space-y-2">
 						<button
 							onclick={onBackToLogin}
-							class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+							class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
 						>
 							Back to Sign In
 						</button>
 						<button
 							onclick={handleClose}
-							class="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors duration-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+							class="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
 						>
 							Close
 						</button>
@@ -141,7 +141,7 @@
 							type="email"
 							id="email"
 							bind:value={email}
-							class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+							class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
 							placeholder="Enter your email"
 							required
 						/>
@@ -150,7 +150,7 @@
 					<button
 						type="submit"
 						disabled={isLoading}
-						class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-gray-400"
+						class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-400"
 					>
 						{#if isLoading}
 							<div class="flex items-center justify-center">

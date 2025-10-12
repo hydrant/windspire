@@ -191,7 +191,8 @@ jobs:
 
       # Install Azure CLI for Bicep compilation
       - name: Install Azure CLI
-        uses: azure/setup-cli@v2
+        run: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 
       # Validate Bicep template syntax and compilation
       - name: Compile Bicep templates
