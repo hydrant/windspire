@@ -27,10 +27,10 @@ if [ -d "windspire_backend" ]; then
         exit 1
     fi
     
-    # Run tests
-    cargo audit
+    # Run security audit (ignore MySQL-specific vulnerabilities since we use PostgreSQL)
+    cargo audit --ignore RUSTSEC-2023-0071
     if [ $? -ne 0 ]; then
-        echo "❌ Backend cargo audit failed. Please fix vurlnerabilities before pushing."
+        echo "❌ Backend security audit failed. Please fix vulnerabilities before pushing."
         exit 1
     fi
 

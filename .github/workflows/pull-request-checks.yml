@@ -185,7 +185,7 @@ jobs:
       
       - name: Security audit
         working-directory: windspire_backend
-        run: cargo audit
+        run: cargo audit --ignore RUSTSEC-2023-0071
         continue-on-error: false
 
   # Infrastructure validation (if infrastructure files changed)
