@@ -59,7 +59,7 @@
 			const idToken = await result.user.getIdToken();
 
 			// Include display name if available (for users with updated profiles)
-			const requestBody: any = { id_token: idToken };
+			const requestBody: { id_token: string; display_name?: string } = { id_token: idToken };
 			if (result.user.displayName) {
 				requestBody.display_name = result.user.displayName;
 				console.log('Sending display_name from Firebase profile:', result.user.displayName);
@@ -92,9 +92,9 @@
 				const errorText = await response.text();
 				throw new Error(`Backend authentication failed: ${response.status} ${errorText}`);
 			}
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error('Login error:', err);
-			error = err.message || 'Login failed. Please try again.';
+			error = err instanceof Error ? err.message : 'Login failed. Please try again.';
 		} finally {
 			isLoading = false;
 		}
@@ -110,7 +110,7 @@
 {#if isOpen}
 	<!-- Modal backdrop -->
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-gray-600 bg-opacity-50"
+		class="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-gray-600"
 		onclick={handleBackdropClick}
 	>
 		<!-- Modal container -->
@@ -143,7 +143,7 @@
 						type="email"
 						id="email"
 						bind:value={email}
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
 						placeholder="Enter your email"
 						required
 					/>
@@ -155,7 +155,7 @@
 						type="password"
 						id="password"
 						bind:value={password}
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
 						placeholder="Enter your password"
 						required
 					/>
@@ -164,7 +164,7 @@
 				<button
 					type="submit"
 					disabled={isLoading}
-					class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-gray-400"
+					class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-400"
 				>
 					{#if isLoading}
 						<div class="flex items-center justify-center">
@@ -192,7 +192,7 @@
 			</form>
 
 			<!-- Divider -->
-			<div class="mb-6 mt-6">
+			<div class="mt-6 mb-6">
 				<div class="relative">
 					<div class="absolute inset-0 flex items-center">
 						<div class="w-full border-t border-gray-300"></div>
@@ -208,7 +208,7 @@
 				<button
 					type="button"
 					onclick={onGoogleSignIn}
-					class="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors duration-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+					class="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
 				>
 					<div class="flex items-center justify-center">
 						<svg class="mr-2 h-5 w-5" viewBox="0 0 24 24">

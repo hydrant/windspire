@@ -1,0 +1,115 @@
+# Infrastructure Build and Deployment
+#
+# Deploys Azure infrastructure resources using Bicep templates
+# - Only runs on tagged releases for controlled infrastructure changes
+# - Sets up Azure resources (Static Web Apps, PostgreSQL, Key Vault, etc.)
+# - Updates GitHub secrets with deployment outputs for dependent pipelines
+#
+# DEPENDENCIES: None - this is the foundation pipeline that other builds depend on
+
+name: Infrastructure Build
+
+on:
+  push:
+    tags:
+      - 'dev*'
+      - 'staging*'
+      - 'prod*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging
+        - prod
+
+permissions:
+  id-token: write
+  contents: read
+  actions: write  # Required to update secrets
+
+jobs:
+  validate:
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    name: Validate Infrastructure
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Validate Bicep template
+      uses: azure/arm-deploy@v1
+      with:
+        scope: resourcegroup
+        resourceGroupName: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        template: infrastructure/main.bicep
+        parameters: infrastructure/main.parameters.json
+        deploymentMode: Validate
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    name: Deploy Infrastructure
+    environment: ${{ github.event.inputs.environment || (startsWith(github.ref, 'refs/tags/prod') && 'production' || startsWith(github.ref, 'refs/tags/staging') && 'staging' || 'development') }}
+    outputs:
+      static-web-app-url: ${{ steps.deploy.outputs.staticWebAppUrl }}
+      postgres-server-name: ${{ steps.deploy.outputs.postgresServerName }}
+      key-vault-name: ${{ steps.deploy.outputs.keyVaultName }}
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Deploy Infrastructure
+      id: deploy
+      uses: azure/arm-deploy@v1
+      with:
+        scope: resourcegroup
+        resourceGroupName: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        template: infrastructure/main.bicep
+        parameters: |
+          appName=windspire
+          environment=${{ github.event.inputs.environment || (startsWith(github.ref, 'refs/tags/prod') && 'prod' || startsWith(github.ref, 'refs/tags/staging') && 'staging' || 'dev') }}
+          postgresAdminLogin=${{ secrets.POSTGRES_ADMIN_LOGIN }}
+          postgresAdminPassword=${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+          firebaseConfig=${{ secrets.FIREBASE_CONFIG }}
+
+    - name: Update GitHub Secrets
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Update the Azure Static Web Apps deployment token
+        echo "${{ steps.deploy.outputs.deploymentToken }}" | gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN
+        
+        # Update the Static Web App URL for frontend builds
+        echo "https://${{ steps.deploy.outputs.staticWebAppUrl }}" | gh secret set AZURE_STATIC_WEB_APP_URL
+        
+        # Keep legacy secret name for backward compatibility
+        echo "https://${{ steps.deploy.outputs.staticWebAppUrl }}" | gh secret set STATIC_WEB_APP_URL
+
+    - name: Output deployment results
+      run: |
+        echo "✅ Infrastructure deployed successfully!"
+        echo "🌐 Static Web App URL: ${{ steps.deploy.outputs.staticWebAppUrl }}"
+        echo "📊 PostgreSQL Server: ${{ steps.deploy.outputs.postgresServerName }}"
+        echo "🔐 Key Vault: ${{ steps.deploy.outputs.keyVaultName }}"
+        echo ""
+        echo "🚀 Ready for application deployments!"
+        echo "   - Frontend builds can now deploy to: ${{ steps.deploy.outputs.staticWebAppUrl }}"
+        echo "   - Backend builds can connect to PostgreSQL: ${{ steps.deploy.outputs.postgresServerName }}"

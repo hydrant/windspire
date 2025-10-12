@@ -76,7 +76,7 @@
 
 			<!-- Desktop Navigation -->
 			<div class="hidden items-center space-x-8 md:flex">
-				{#each navigationItems as item}
+				{#each navigationItems as item (item.href)}
 					<button
 						onclick={() => handleNavigation(item.href)}
 						class="rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors duration-200 hover:text-blue-600"
@@ -94,7 +94,7 @@
 					<div class="user-menu-container relative">
 						<button
 							onclick={toggleUserMenu}
-							class="flex items-center space-x-3 rounded-full p-2 text-sm transition-colors duration-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+							class="flex items-center space-x-3 rounded-full p-2 text-sm transition-colors duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
 						>
 							{#if user.picture}
 								<img class="h-8 w-8 rounded-full" src={user.picture} alt={user.name} />
@@ -182,8 +182,8 @@
 	<!-- Mobile menu -->
 	{#if mobileMenuOpen}
 		<div class="md:hidden">
-			<div class="space-y-1 bg-gray-50 px-2 pb-3 pt-2 sm:px-3">
-				{#each navigationItems as item}
+			<div class="space-y-1 bg-gray-50 px-2 pt-2 pb-3 sm:px-3">
+				{#each navigationItems as item (item.href)}
 					<button
 						onclick={() => handleNavigation(item.href)}
 						class="block w-full rounded-md px-3 py-2 text-left text-base font-medium text-gray-700 transition-colors duration-200 hover:bg-gray-100 hover:text-blue-600"

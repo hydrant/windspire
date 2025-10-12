@@ -1,5 +1,5 @@
 use crate::application::config::AppConfig;
-use crate::application::services::{jwt_service::JwtService, firebase_service::FirebaseService};
+use crate::application::services::{firebase_service::FirebaseService, jwt_service::JwtService};
 use sqlx::PgPool;
 use std::sync::Arc;
 

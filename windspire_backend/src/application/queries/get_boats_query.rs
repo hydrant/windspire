@@ -30,10 +30,10 @@ pub async fn get_boats_query(
     };
 
     let repository = SqlxBoatRepository;
-    
+
     // Check if owners should be included
     let include_owners = params.include.as_deref() == Some("owners");
-    
+
     if include_owners {
         match repository
             .get_paginated_with_owners(&app_state.db_pool, pagination_params)

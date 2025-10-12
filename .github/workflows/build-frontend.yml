@@ -1,0 +1,117 @@
+# Frontend Build and Deployment
+#
+# Builds and deploys the frontend application to Azure Static Web Apps
+# - Only runs on tagged releases for controlled deployments
+# - Focuses purely on building and deploying artifacts (no quality checks)
+# - Depends on infrastructure pipeline to provide deployment targets
+#
+# DEPENDENCY: Requires build-infrastructure.yml to run first and set Azure secrets
+
+name: Frontend Build
+
+on:
+  push:
+    tags:
+      - 'dev*'
+      - 'staging*'
+      - 'prod*'
+  workflow_run:
+    workflows: ["Infrastructure Build"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  # Build job - creates production artifacts
+  build_frontend:
+    # Only run on successful infrastructure deployment or direct tag pushes
+    if: >
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+    runs-on: ubuntu-latest
+    name: Build Frontend
+    defaults:
+      run:
+        working-directory: windspire_frontend_svelte_csr
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Determine environment from tag
+      - name: Determine Environment
+        id: env
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/prod* ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/staging* ]]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          else
+            echo "environment=development" >> $GITHUB_OUTPUT
+          fi
+
+      # Set up Node.js with caching
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: windspire_frontend_svelte_csr/package-lock.json
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # Build frontend for production
+      - name: Build frontend
+        run: npm run build
+        env:
+          NODE_ENV: production
+          VITE_API_BASE_URL: ${{ secrets.AZURE_STATIC_WEB_APP_URL }}/api
+          VITE_FIREBASE_CONFIG: ${{ secrets.VITE_FIREBASE_CONFIG }}
+
+      # Upload build artifacts for deployment
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist-${{ steps.env.outputs.environment }}
+          path: windspire_frontend_svelte_csr/dist/
+          retention-days: 7
+
+  # Deploy job - deploys to Azure Static Web Apps
+  deploy_frontend:
+    needs: build_frontend
+    runs-on: ubuntu-latest
+    name: Deploy Frontend
+    environment: ${{ needs.build_frontend.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Download build artifacts
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist-${{ needs.build_frontend.outputs.environment }}
+          path: windspire_frontend_svelte_csr/dist/
+
+      # Deploy to Azure Static Web Apps
+      - name: Deploy to Azure Static Web Apps
+        id: deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "windspire_frontend_svelte_csr/dist"
+          skip_app_build: true  # We already built the app
+          skip_api_build: true  # Backend is deployed separately
+
+      # Output deployment results
+      - name: Output deployment results
+        run: |
+          echo "✅ Frontend deployed successfully!"
+          echo "🌐 Environment: ${{ needs.build_frontend.outputs.environment }}"
+          echo "📦 Deployment URL: ${{ steps.deploy.outputs.static_web_app_url }}"
+          echo ""
+          echo "🚀 Frontend is now live and ready for users!"

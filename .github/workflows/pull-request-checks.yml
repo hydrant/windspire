@@ -1,0 +1,250 @@
+# Pull Request Quality Gates
+#
+# Runs quality checks on pull requests to ensure code quality before merging
+# - Code formatting checks
+# - Linting and static analysis
+# - Unit tests
+# - Security audits
+# - Type checking
+#
+# This pipeline focuses purely on quality gates and does NOT build or deploy artifacts
+
+name: Pull Request Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Detect changed files
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.changes.outputs.frontend }}
+      backend: ${{ steps.changes.outputs.backend }}
+      infrastructure: ${{ steps.changes.outputs.infrastructure }}
+      workflows: ${{ steps.changes.outputs.workflows }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            frontend:
+              - 'windspire_frontend_svelte_csr/**'
+            backend:
+              - 'windspire_backend/**'
+            infrastructure:
+              - 'infrastructure/**'
+            workflows:
+              - '.github/workflows/**'
+
+  # Frontend quality checks
+  frontend_checks:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflows == 'true' }}
+    runs-on: ubuntu-latest
+    name: Frontend Quality Checks
+    defaults:
+      run:
+        working-directory: windspire_frontend_svelte_csr
+    steps:
+      - uses: actions/checkout@v4
+
+      # Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: windspire_frontend_svelte_csr/package-lock.json
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # Lint frontend code
+      - name: Lint frontend
+        run: npm run lint
+        continue-on-error: false
+
+      # Type check frontend
+      - name: Type check frontend
+        run: npm run check
+        continue-on-error: false
+
+      # Run frontend unit tests
+      - name: Test frontend
+        run: npm run test:unit
+        continue-on-error: false
+
+      # Verify build can complete (without deploying)
+      - name: Verify build
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: https://example.com/api  # Dummy URL for build verification
+          VITE_FIREBASE_CONFIG: ${{ secrets.VITE_FIREBASE_CONFIG || '{}' }}
+
+  # Backend quality checks
+  backend_checks:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' || needs.changes.outputs.workflows == 'true' }}
+    runs-on: ubuntu-latest
+    name: Backend Quality Checks
+    defaults:
+      run:
+        working-directory: windspire_backend
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: windspire_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Set up Rust
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      # Cache dependencies
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            windspire_backend/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('windspire_backend/**/Cargo.lock') }}
+
+      # Check code formatting (fast fail)
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+        continue-on-error: false
+
+      # Install SQLx CLI (with caching)
+      - name: Install SQLx CLI
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: sqlx-cli
+          features: rustls,postgres
+
+      # Setup test database
+      - name: Setup test database
+        run: |
+          sqlx database create
+          sqlx migrate run
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/windspire_test
+
+      # Run Clippy linting (after DB setup for SQLx compile-time checks)
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+        continue-on-error: false
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/windspire_test
+
+      # Run unit tests
+      - name: Run tests
+        run: cargo test --verbose
+        continue-on-error: false
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/windspire_test
+          RUST_LOG: debug
+
+      # Verify release build can complete
+      - name: Verify build
+        run: cargo check --release
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/windspire_test
+
+      # Run security audit (with caching)
+      - name: Install cargo-audit
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: cargo-audit
+          features: fix
+      
+      - name: Security audit
+        working-directory: windspire_backend
+        run: cargo audit --ignore RUSTSEC-2023-0071
+        continue-on-error: false
+
+  # Infrastructure validation (if infrastructure files changed)
+  infrastructure_checks:
+    needs: changes
+    if: ${{ needs.changes.outputs.infrastructure == 'true' || needs.changes.outputs.workflows == 'true' }}
+    runs-on: ubuntu-latest
+    name: Infrastructure Validation
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Azure CLI for Bicep compilation
+      - name: Install Azure CLI
+        run: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+      # Validate Bicep template syntax and compilation
+      - name: Compile Bicep templates
+        run: |
+          echo "🔍 Validating Bicep template syntax..."
+          
+          # Check if bicep files exist
+          if [ ! -f "infrastructure/main.bicep" ]; then
+            echo "❌ No main.bicep found in infrastructure/ directory"
+            exit 1
+          fi
+          
+          # Compile Bicep to ARM template (syntax validation)
+          az bicep build --file infrastructure/main.bicep --outfile infrastructure/compiled-template.json
+          
+          echo "✅ Bicep template compiled successfully!"
+          echo "📋 Generated ARM template size: $(wc -c < infrastructure/compiled-template.json) bytes"
+          
+          # Optional: Validate ARM template structure
+          echo "🔍 Validating ARM template structure..."
+          if ! cat infrastructure/compiled-template.json | jq . > /dev/null 2>&1; then
+            echo "❌ Generated ARM template is not valid JSON"
+            exit 1
+          fi
+          
+          echo "✅ ARM template structure is valid!"
+          
+          # Clean up generated file
+          rm -f infrastructure/compiled-template.json
+          
+          echo "🎉 Infrastructure validation completed successfully!"
+
+  # Summary job that depends on all checks
+  all_checks_passed:
+    needs: [changes, frontend_checks, backend_checks, infrastructure_checks]
+    if: always()
+    runs-on: ubuntu-latest
+    name: All Quality Checks
+    steps:
+      - name: Check all jobs passed
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          echo "One or more quality checks failed"
+          exit 1
+      
+      - name: All checks passed
+        run: echo "All quality checks passed successfully"

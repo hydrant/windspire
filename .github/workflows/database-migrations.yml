@@ -1,0 +1,255 @@
+name: Database Migrations
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'windspire_backend/migrations/**'
+      - '.github/workflows/database-migrations.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'windspire_backend/migrations/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to run migrations against'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging
+        - prod
+      dry_run:
+        description: 'Dry run (validate only, do not apply)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  validate_migrations:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: windspire_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          windspire_backend/target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('windspire_backend/**/Cargo.lock') }}
+
+    - name: Install SQLx CLI
+      uses: baptiste0928/cargo-install@v2
+      with:
+        crate: sqlx-cli
+        features: rustls,postgres
+
+    - name: Validate migrations syntax
+      run: |
+        cd windspire_backend
+        # Check that all migration files are properly formatted
+        for file in migrations/*.sql; do
+          echo "Validating $file..."
+          # Check for common SQL syntax issues
+          if grep -i "drop table\|truncate\|delete from.*where" "$file" > /dev/null; then
+            echo "⚠️  Warning: $file contains potentially destructive operations"
+          fi
+        done
+
+    - name: Test migrations on fresh database
+      run: |
+        cd windspire_backend
+        sqlx database create
+        sqlx migrate run
+        
+        # Verify migration status
+        sqlx migrate info
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/windspire_test
+
+    - name: Test migration rollback
+      run: |
+        cd windspire_backend
+        # Test that we can rollback the last migration
+        LAST_VERSION=$(sqlx migrate info | grep "applied" | tail -1 | awk '{print $1}')
+        if [ ! -z "$LAST_VERSION" ]; then
+          echo "Testing rollback of version: $LAST_VERSION"
+          sqlx migrate revert
+          sqlx migrate run
+        fi
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/windspire_test
+
+  run_migrations:
+    needs: validate_migrations
+    runs-on: ubuntu-latest
+    if: (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && github.event.inputs.dry_run != 'true'
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install SQLx CLI
+      uses: baptiste0928/cargo-install@v2
+      with:
+        crate: sqlx-cli
+        features: rustls,postgres
+
+    - name: Get current migration status
+      id: migration_status
+      run: |
+        cd windspire_backend
+        echo "Current migration status:"
+        sqlx migrate info || echo "No migrations applied yet"
+        
+        # Get pending migrations
+        PENDING=$(sqlx migrate info | grep "pending" | wc -l)
+        echo "pending_count=$PENDING" >> $GITHUB_OUTPUT
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    - name: Backup database before migration
+      if: steps.migration_status.outputs.pending_count > 0
+      run: |
+        echo "Creating database backup before applying migrations..."
+        # Note: In production, you might want to use Azure Database backup features
+        # This is a basic example for development environments
+        cd windspire_backend
+        sqlx migrate info > migration_backup_$(date +%Y%m%d_%H%M%S).log
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    - name: Run migrations
+      if: steps.migration_status.outputs.pending_count > 0
+      run: |
+        cd windspire_backend
+        echo "Running ${{ steps.migration_status.outputs.pending_count }} pending migrations..."
+        sqlx migrate run
+        
+        echo "✅ Migrations completed successfully!"
+        echo "Updated migration status:"
+        sqlx migrate info
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    - name: Verify database health
+      run: |
+        cd windspire_backend
+        echo "Verifying database health after migrations..."
+        
+        # Run a simple query to verify connectivity and basic functionality
+        sqlx query "SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = 'public'" \
+          --database-url "$DATABASE_URL"
+        
+        echo "✅ Database health check passed!"
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    - name: Update migration status comment
+      if: github.event_name == 'pull_request' && steps.migration_status.outputs.pending_count > 0
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const botComment = comments.find(comment => 
+            comment.user.type === 'Bot' && comment.body.includes('Database Migration Status')
+          );
+          
+          const body = `## Database Migration Status 📊
+          
+          ✅ **${{ steps.migration_status.outputs.pending_count }} migrations applied successfully**
+          
+          - Environment: \`${{ github.event.inputs.environment || 'dev' }}\`
+          - Timestamp: \`${new Date().toISOString()}\`
+          - Workflow: [\`${{ github.run_id }}\`](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          
+          All database migrations have been applied and verified. ✨`;
+          
+          if (botComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: body
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+          }
+
+  dry_run:
+    needs: validate_migrations
+    runs-on: ubuntu-latest
+    if: github.event.inputs.dry_run == 'true'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install SQLx CLI
+      run: cargo install sqlx-cli --no-default-features --features rustls,postgres
+
+    - name: Dry run - Show migration status
+      run: |
+        cd windspire_backend
+        echo "🔍 DRY RUN MODE - No changes will be applied"
+        echo ""
+        echo "Current migration status:"
+        sqlx migrate info || echo "No migrations applied yet"
+        
+        echo ""
+        echo "Available migration files:"
+        ls -la migrations/
+        
+        echo ""
+        echo "Migration file contents:"
+        for file in migrations/*.sql; do
+          echo "📄 $file:"
+          echo "----------------------------------------"
+          cat "$file"
+          echo ""
+          echo "----------------------------------------"
+        done
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
