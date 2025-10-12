@@ -1,5 +1,5 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
 import { browser } from '$app/environment';
 
 // Firebase configuration - these should be set via environment variables
@@ -13,7 +13,7 @@ const firebaseConfig = {
 };
 
 // Check if Firebase configuration is valid
-function isFirebaseConfigValid(config: any): boolean {
+function isFirebaseConfigValid(config: Record<string, string | undefined>): boolean {
 	const hasAllFields =
 		config.apiKey &&
 		config.authDomain &&
@@ -23,17 +23,17 @@ function isFirebaseConfigValid(config: any): boolean {
 		config.appId;
 
 	const hasValidValues =
-		!config.apiKey.includes('your-firebase') &&
-		!config.apiKey.includes('placeholder') &&
-		!config.messagingSenderId.includes('123456789') &&
-		!config.appId.includes('abcdef123456');
+		!config.apiKey?.includes('your-firebase') &&
+		!config.apiKey?.includes('placeholder') &&
+		!config.messagingSenderId?.includes('123456789') &&
+		!config.appId?.includes('abcdef123456');
 
-	return hasAllFields && hasValidValues;
+	return Boolean(hasAllFields && hasValidValues);
 }
 
 // Initialize Firebase only in browser environment and with valid config
-let app: any = null;
-let auth: any = null;
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
 
 if (browser && isFirebaseConfigValid(firebaseConfig)) {
 	try {

@@ -133,7 +133,7 @@
 								</svg>
 								<span class="font-medium">Owners:</span>
 								<span class="ml-1">
-									{#each boat.owners as owner, index}
+									{#each boat.owners as owner, index (owner.id)}
 										{owner.firstName} {owner.lastName}{index < boat.owners.length - 1 ? ', ' : ''}
 									{/each}
 								</span>
@@ -184,7 +184,7 @@
 			<select
 				onchange={handlePageSizeChange}
 				value={boats.limit}
-				class="rounded-md border border-gray-300 px-3 py-1 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+				class="rounded-md border border-gray-300 px-3 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
 			>
 				<option value="10">10</option>
 				<option value="20">20</option>
@@ -214,7 +214,7 @@
 			</button>
 
 			<!-- Page numbers -->
-			{#each getPageNumbers() as pageNum}
+			{#each getPageNumbers() as pageNum (pageNum)}
 				<button
 					onclick={() => handlePageChange(pageNum)}
 					class="rounded-md px-3 py-2 text-sm font-medium"

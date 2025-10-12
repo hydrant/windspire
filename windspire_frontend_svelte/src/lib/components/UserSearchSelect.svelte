@@ -94,7 +94,7 @@
 			onkeydown={handleKeydown}
 			{placeholder}
 			{disabled}
-			class="w-full rounded-md border border-gray-300 bg-white py-2 pr-10 pl-3 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-500"
+			class="w-full rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
 		/>
 
 		<!-- Search icon -->
@@ -121,7 +121,7 @@
 		<div
 			class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg"
 		>
-			{#each searchResults as user}
+			{#each searchResults as user (user.id)}
 				<button
 					type="button"
 					onclick={() => handleSelectUser(user)}

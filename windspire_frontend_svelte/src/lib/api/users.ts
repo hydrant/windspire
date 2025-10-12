@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Owner, PaginatedResult, PaginationParams } from './types';
+import type { Owner, PaginationParams } from './types';
 
 export class UsersApi {
 	async getUsers(params: PaginationParams = {}): Promise<Owner[]> {

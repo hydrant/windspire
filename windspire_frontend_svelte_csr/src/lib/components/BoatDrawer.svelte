@@ -133,6 +133,10 @@
 			<div
 				class="absolute inset-0 bg-black bg-opacity-50 transition-opacity"
 				onclick={handleCancel}
+				onkeydown={(e) => e.key === 'Escape' && handleCancel()}
+				role="button"
+				tabindex="0"
+				aria-label="Close drawer"
 			></div>
 
 			<!-- Drawer panel -->
@@ -140,6 +144,9 @@
 				<div
 					class="w-screen max-w-md transform bg-white shadow-xl transition-transform"
 					onclick={(e) => e.stopPropagation()}
+					onkeydown={(e) => e.stopPropagation()}
+					role="dialog"
+					aria-labelledby="drawer-title"
 				>
 					<!-- Drawer header -->
 					<div class="flex h-full flex-col">

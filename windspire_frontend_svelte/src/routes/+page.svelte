@@ -69,7 +69,7 @@
 		</div>
 
 		<div class="grid grid-cols-1 gap-8 md:grid-cols-3">
-			{#each features as feature}
+			{#each features as feature (feature.title)}
 				<div class="rounded-lg p-6 text-center transition-shadow duration-200 hover:shadow-lg">
 					<div class="mb-4 text-4xl">{feature.icon}</div>
 					<h3 class="mb-3 text-xl font-semibold text-gray-900">{feature.title}</h3>
