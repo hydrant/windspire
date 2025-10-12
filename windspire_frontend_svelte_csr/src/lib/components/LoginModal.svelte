@@ -48,9 +48,9 @@
 					throw new Error('Backend authentication failed');
 				}
 			}
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error('Google sign-in error:', err);
-			error = err.message || 'Failed to sign in with Google';
+			error = err instanceof Error ? err.message : 'Failed to sign in with Google';
 		} finally {
 			isLoading = false;
 		}
@@ -94,9 +94,9 @@
 					throw new Error('Backend authentication failed');
 				}
 			}
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error('Email sign-in error:', err);
-			error = err.message || 'Failed to sign in';
+			error = err instanceof Error ? err.message : 'Failed to sign in';
 		} finally {
 			isLoading = false;
 		}

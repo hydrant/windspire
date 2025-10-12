@@ -4,59 +4,59 @@
 @import 'tailwindcss/utilities';
 
 :root {
-    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
-    font-weight: 400;
-    color-scheme: light;
-    color: rgba(55, 65, 81, 1);
-    background-color: #ffffff;
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    -webkit-text-size-adjust: 100%;
+	font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+	line-height: 1.5;
+	font-weight: 400;
+	color-scheme: light;
+	color: rgba(55, 65, 81, 1);
+	background-color: #ffffff;
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	-webkit-text-size-adjust: 100%;
 }
 
 body {
-    margin: 0;
-    display: flex;
-    place-items: center;
-    min-width: 320px;
-    min-height: 100vh;
+	margin: 0;
+	display: flex;
+	place-items: center;
+	min-width: 320px;
+	min-height: 100vh;
 }
 
 #app {
-    width: 100%;
-    margin: 0;
+	width: 100%;
+	margin: 0;
 }
 
 /* Button styles */
 .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+	@apply rounded-lg px-4 py-2 font-medium transition-colors duration-200;
 }
 
 .btn-primary {
-    @apply bg-blue-600 text-white hover:bg-blue-700;
+	@apply bg-blue-600 text-white hover:bg-blue-700;
 }
 
 .btn-secondary {
-    @apply bg-gray-200 text-gray-800 hover:bg-gray-300;
+	@apply bg-gray-200 text-gray-800 hover:bg-gray-300;
 }
 
 .btn-danger {
-    @apply bg-red-600 text-white hover:bg-red-700;
+	@apply bg-red-600 text-white hover:bg-red-700;
 }
 
 /* Form styles */
 .form-input {
-    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500;
+	@apply block w-full rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500;
 }
 
 .form-label {
-    @apply block text-sm font-medium text-gray-700;
+	@apply block text-sm font-medium text-gray-700;
 }
 
 /* Loading spinner */
 .spinner {
-    @apply inline-block w-4 h-4 border-2 border-current border-r-transparent rounded-full animate-spin;
+	@apply inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent;
 }

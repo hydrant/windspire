@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { usersApi, type UserProfile, type Boat } from '../api';
+	import { usersApi, type UserProfile } from '../api';
 
 	console.log('UserProfile component is loading...');
 	console.log('UserProfile component script executed!');
@@ -15,7 +15,7 @@
 	function getUserIdFromUrl(): string {
 		const path = window.location.pathname;
 		console.log('Current path:', path);
-		const matches = path.match(/\/users\/([^\/]+)/);
+		const matches = path.match(/\/users\/([^/]+)/);
 		console.log('Regex matches:', matches);
 		return matches ? matches[1] : '';
 	}
@@ -132,7 +132,7 @@
 				</div>
 			{:else}
 				<div class="divide-y divide-gray-200">
-					{#each userProfile.boats as boat}
+					{#each userProfile.boats as boat (boat.id)}
 						<div class="px-6 py-4">
 							<div class="flex items-center justify-between">
 								<div>

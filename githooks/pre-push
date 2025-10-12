@@ -32,9 +32,9 @@ if [ -d "windspire_backend" ]; then
 fi
 
 # Check frontend (if windspire_frontend_svelte directory exists)
-if [ -d "windspire_frontend_svelte" ]; then
+if [ -d "windspire_frontend_svelte_csr" ]; then
     echo "🔧 Checking Svelte frontend..."
-    cd windspire_frontend_svelte
+    cd windspire_frontend_svelte_csr
     
     # Check if node_modules exists
     if [ ! -d "node_modules" ]; then

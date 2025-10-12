@@ -242,7 +242,7 @@
 										<option value=""
 											>{countries.length > 0 ? 'Select a country' : 'Loading countries...'}</option
 										>
-										{#each countries as country}
+										{#each countries as country (country.id)}
 											<option value={country.id}
 												>{country.name ||
 													country.isoAlpha3 ||

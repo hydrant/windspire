@@ -13,12 +13,14 @@ This is the Client-Side Rendered (CSR) version of the Windspire frontend, specif
 ## Key Differences from SvelteKit Version
 
 ### CSR vs SSR
+
 - **No Server-Side Rendering**: All rendering happens in the browser
 - **Static File Deployment**: Builds to static HTML, CSS, and JS files
 - **Client-Side Routing**: Uses hash-based routing for SPA behavior
 - **API Integration**: Direct fetch calls to Azure Functions backend
 
 ### File Structure
+
 ```
 src/
 ├── lib/
@@ -35,12 +37,14 @@ src/
 ## Environment Configuration
 
 ### Development
+
 ```bash
 VITE_API_BASE_URL=http://localhost:8080/api
 VITE_FIREBASE_CONFIG={"apiKey":"...","authDomain":"..."}
 ```
 
 ### Production (Azure Static Web Apps)
+
 ```bash
 VITE_API_BASE_URL=/api
 VITE_FIREBASE_CONFIG={"apiKey":"...","authDomain":"..."}
@@ -72,37 +76,45 @@ Uses `svelte-spa-router` for client-side routing:
 - `*` - 404 not found page
 
 ### Route Protection
+
 Authentication-required routes use route conditions to redirect unauthenticated users to the login modal.
 
 ## API Integration
 
 ### API Client
+
 The `apiClient` automatically:
+
 - Adds authentication headers from localStorage
 - Handles 401 responses by clearing invalid tokens
 - Parses JSON responses with error handling
 - Supports typed responses via TypeScript generics
 
 ### Environment-Based URLs
+
 API URLs are configured via environment variables:
+
 - **Development**: `http://localhost:8080/api`
 - **Production**: `/api` (relative to Azure Static Web Apps domain)
 
 ## State Management
 
 ### User Store
+
 Manages authentication state using Svelte stores:
+
 ```typescript
 import { userStore } from '$lib/stores/user';
 
 // Check if user is authenticated
-$userStore // null or User object
+$userStore; // null or User object
 
 // Update user state
 userStore.set(userData);
 ```
 
 ### Authentication Flow
+
 1. User signs in via Firebase
 2. Firebase token sent to backend `/api/auth/firebase`
 3. Backend returns JWT token
@@ -112,11 +124,13 @@ userStore.set(userData);
 ## Azure Static Web Apps Configuration
 
 ### staticwebapp.config.json
+
 - **API Routes**: `/api/*` forwarded to Azure Functions
 - **SPA Fallback**: All other routes serve `index.html`
 - **Asset Handling**: Static assets served directly
 
 ### Build Process
+
 1. Vite builds static files to `dist/` directory
 2. Azure Static Web Apps serves files from `dist/`
 3. API calls routed to Azure Functions backend
@@ -124,12 +138,14 @@ userStore.set(userData);
 ## Deployment
 
 ### Automatic Deployment
+
 - Push to `main` branch triggers deployment
 - GitHub Actions builds both frontend and backend
 - Frontend deployed to Azure Static Web Apps
 - Backend deployed as Azure Functions
 
 ### Manual Deployment
+
 ```bash
 # Build locally
 pnpm build
@@ -144,6 +160,7 @@ az staticwebapp deploy \
 ## Development Workflow
 
 ### Local Development
+
 ```bash
 # Terminal 1: Start backend
 cd windspire_backend
@@ -155,6 +172,7 @@ pnpm dev
 ```
 
 ### Testing
+
 - Frontend: http://localhost:3000
 - Backend: http://localhost:8080/api
 - Integration: Both connected via API calls
@@ -162,16 +180,19 @@ pnpm dev
 ## Production Considerations
 
 ### Performance
+
 - Code splitting via Vite's manual chunks
 - Static asset optimization
 - Firebase SDK lazy loading
 
 ### SEO
+
 - SPA architecture means limited SEO
 - Consider pre-rendering for marketing pages
 - Use meta tags appropriately
 
 ### Security
+
 - No server secrets in frontend code
 - Environment variables for configuration
 - Firebase handles authentication securely
@@ -179,6 +200,7 @@ pnpm dev
 ## Migration from SvelteKit
 
 The CSR version maintains API compatibility with the SvelteKit version:
+
 - Same API endpoints and data structures
 - Same authentication flow
 - Same UI components (adapted for pure Svelte)

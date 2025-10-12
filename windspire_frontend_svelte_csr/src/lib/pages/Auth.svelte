@@ -2,7 +2,6 @@
 	import { firebaseAuthService } from '../firebase';
 	import { userStore } from '../stores/user';
 	import { config } from '../config';
-	import { route } from '@mateothegreat/svelte5-router';
 
 	type AuthMode = 'signin' | 'signup';
 	let authMode: AuthMode = $state('signin');
@@ -36,7 +35,7 @@
 				const idToken = await result.user.getIdToken();
 
 				// Include display name if available
-				const requestBody: any = { id_token: idToken };
+				const requestBody: { id_token: string; display_name?: string } = { id_token: idToken };
 				if (result.user.displayName) {
 					requestBody.display_name = result.user.displayName;
 				}
@@ -69,9 +68,9 @@
 					throw new Error('Backend authentication failed');
 				}
 			}
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error('Google sign-in error:', err);
-			error = err.message || 'Failed to sign in with Google';
+			error = err instanceof Error ? err.message : 'Failed to sign in with Google';
 		} finally {
 			isLoading = false;
 		}
@@ -118,7 +117,7 @@
 				const idToken = await result.user.getIdToken();
 
 				// Include display name for both sign-in and sign-up
-				const requestBody: any = { id_token: idToken };
+				const requestBody: { id_token: string; display_name?: string } = { id_token: idToken };
 				if (authMode === 'signup' && displayName) {
 					requestBody.display_name = displayName;
 				} else if (result.user.displayName) {
@@ -160,9 +159,12 @@
 					throw new Error('Backend authentication failed');
 				}
 			}
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error(`${authMode} error:`, err);
-			error = err.message || `Failed to ${authMode === 'signin' ? 'sign in' : 'create account'}`;
+			error =
+				err instanceof Error
+					? err.message
+					: `Failed to ${authMode === 'signin' ? 'sign in' : 'create account'}`;
 		} finally {
 			isLoading = false;
 		}

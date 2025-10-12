@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Owner, PaginatedResult, PaginationParams, UserProfile } from './types';
+import type { Owner, PaginationParams, UserProfile } from './types';
 
 export class UsersApi {
     async getUsers(params: PaginationParams = {}): Promise<Owner[]> {
@@ -34,10 +34,11 @@ export class UsersApi {
             }
 
             const searchTerm = query.toLowerCase();
-            return users.filter((user: Owner) =>
-                user.firstName?.toLowerCase().includes(searchTerm) ||
-                user.lastName?.toLowerCase().includes(searchTerm) ||
-                user.email?.toLowerCase().includes(searchTerm)
+            return users.filter(
+                (user: Owner) =>
+                    user.firstName?.toLowerCase().includes(searchTerm) ||
+                    user.lastName?.toLowerCase().includes(searchTerm) ||
+                    user.email?.toLowerCase().includes(searchTerm)
             );
         } catch (error) {
             console.error('Error searching users:', error);

@@ -5,9 +5,9 @@
 	import Home from './lib/pages/Home.svelte';
 	import Boats from './lib/pages/Boats.svelte';
 	import UserProfile from './lib/pages/UserProfile.svelte';
-	// @ts-ignore - Svelte component imports
+	// @ts-expect-error - Svelte component imports
 	import TestProfile from './lib/pages/TestProfile.svelte';
-	// @ts-ignore - Svelte component imports
+	// @ts-expect-error - Svelte component imports
 	import Auth from './lib/pages/Auth.svelte';
 	import NotFound from './lib/pages/NotFound.svelte';
 

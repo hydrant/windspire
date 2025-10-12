@@ -30,7 +30,9 @@ export class FirebaseAuthService {
     async signInWithGoogle(): Promise<UserCredential | null> {
         if (!auth) {
             console.warn('Firebase auth not available - Firebase not properly initialized');
-            throw new Error('Firebase authentication is not available. Please check your Firebase configuration.');
+            throw new Error(
+                'Firebase authentication is not available. Please check your Firebase configuration.'
+            );
         }
 
         try {
@@ -41,24 +43,35 @@ export class FirebaseAuthService {
 
             const result = await signInWithPopup(auth, provider);
             return result;
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Firebase Google sign-in error:', error);
 
             // Provide specific guidance for common errors
-            if (error.code === 'auth/operation-not-allowed') {
-                throw new Error('Google Sign-In is not enabled in Firebase. Please enable it in the Firebase Console under Authentication > Sign-in method > Google.');
-            } else if (error.code === 'auth/unauthorized-domain') {
-                throw new Error('This domain is not authorized for OAuth operations. Please add it to the Firebase Console under Authentication > Settings > Authorized domains.');
-            } else if (error.code === 'auth/popup-blocked') {
-                throw new Error('Sign-in popup was blocked by the browser. Please allow popups for this site and try again.');
-            } else if (error.code === 'auth/popup-closed-by-user') {
-                throw new Error('Sign-in popup was closed before completing. Please try again.');
-            } else if (error.code === 'auth/cancelled-popup-request') {
-                // User cancelled - this is normal, just return null
-                return null;
+            if (error && typeof error === 'object' && 'code' in error) {
+                const firebaseError = error as { code: string; message: string };
+                if (firebaseError.code === 'auth/operation-not-allowed') {
+                    throw new Error(
+                        'Google Sign-In is not enabled in Firebase. Please enable it in the Firebase Console under Authentication > Sign-in method > Google.'
+                    );
+                } else if (firebaseError.code === 'auth/unauthorized-domain') {
+                    throw new Error(
+                        'This domain is not authorized for OAuth operations. Please add it to the Firebase Console under Authentication > Settings > Authorized domains.'
+                    );
+                } else if (firebaseError.code === 'auth/popup-blocked') {
+                    throw new Error(
+                        'Sign-in popup was blocked by the browser. Please allow popups for this site and try again.'
+                    );
+                } else if (firebaseError.code === 'auth/popup-closed-by-user') {
+                    throw new Error('Sign-in popup was closed before completing. Please try again.');
+                } else if (firebaseError.code === 'auth/cancelled-popup-request') {
+                    // User cancelled - this is normal, just return null
+                    return null;
+                }
             }
 
-            throw new Error(`Sign-in failed: ${error.message}`);
+            throw new Error(
+                `Sign-in failed: ${error instanceof Error ? (error instanceof Error ? error.message : 'Unknown error') : 'Unknown error'}`
+            );
         }
     }
 
@@ -72,9 +85,11 @@ export class FirebaseAuthService {
 
         try {
             return await signInWithEmailAndPassword(auth, email, password);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Email sign-in error:', error);
-            throw new Error(`Sign-in failed: ${error.message}`);
+            throw new Error(
+                `Sign-in failed: ${error instanceof Error ? (error instanceof Error ? error.message : 'Unknown error') : 'Unknown error'}`
+            );
         }
     }
 
@@ -88,16 +103,22 @@ export class FirebaseAuthService {
 
         try {
             return await createUserWithEmailAndPassword(auth, email, password);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('User creation error:', error);
-            throw new Error(`Account creation failed: ${error.message}`);
+            throw new Error(
+                `Account creation failed: ${error instanceof Error ? (error instanceof Error ? error.message : 'Unknown error') : 'Unknown error'}`
+            );
         }
     }
 
     /**
      * Sign up with email, password, and display name
      */
-    async signUpWithEmailAndPassword(email: string, password: string, displayName: string): Promise<UserCredential> {
+    async signUpWithEmailAndPassword(
+        email: string,
+        password: string,
+        displayName: string
+    ): Promise<UserCredential> {
         if (!auth) {
             throw new Error('Firebase authentication is not available.');
         }
@@ -112,9 +133,11 @@ export class FirebaseAuthService {
             }
 
             return userCredential;
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('User creation error:', error);
-            throw new Error(`Account creation failed: ${error.message}`);
+            throw new Error(
+                `Account creation failed: ${error instanceof Error ? (error instanceof Error ? error.message : 'Unknown error') : 'Unknown error'}`
+            );
         }
     }
 
@@ -128,9 +151,11 @@ export class FirebaseAuthService {
 
         try {
             await sendPasswordResetEmail(auth, email);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Password reset error:', error);
-            throw new Error(`Password reset failed: ${error.message}`);
+            throw new Error(
+                `Password reset failed: ${error instanceof Error ? (error instanceof Error ? error.message : 'Unknown error') : 'Unknown error'}`
+            );
         }
     }
 
@@ -140,21 +165,28 @@ export class FirebaseAuthService {
     async sendEmailVerification(user: User): Promise<void> {
         try {
             await sendEmailVerification(user);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Email verification error:', error);
-            throw new Error(`Email verification failed: ${error.message}`);
+            throw new Error(
+                `Email verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+            );
         }
     }
 
     /**
      * Update user profile
      */
-    async updateUserProfile(user: User, profile: { displayName?: string; photoURL?: string }): Promise<void> {
+    async updateUserProfile(
+        user: User,
+        profile: { displayName?: string; photoURL?: string }
+    ): Promise<void> {
         try {
             await updateProfile(user, profile);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Profile update error:', error);
-            throw new Error(`Profile update failed: ${error.message}`);
+            throw new Error(
+                `Profile update failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+            );
         }
     }
 
@@ -168,9 +200,11 @@ export class FirebaseAuthService {
 
         try {
             await signOut(auth);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Sign-out error:', error);
-            throw new Error(`Sign-out failed: ${error.message}`);
+            throw new Error(
+                `Sign-out failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+            );
         }
     }
 
@@ -210,9 +244,11 @@ export class FirebaseAuthService {
 
         try {
             return await user.getIdToken(forceRefresh);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Token retrieval error:', error);
-            throw new Error(`Token retrieval failed: ${error.message}`);
+            throw new Error(
+                `Token retrieval failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+            );
         }
     }
 }

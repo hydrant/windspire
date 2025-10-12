@@ -103,7 +103,7 @@
 		</div>
 	{:else}
 		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-			{#each boats as boat}
+			{#each boats as boat (boat.id)}
 				<div
 					class="overflow-hidden rounded-lg bg-white shadow-md transition-shadow duration-200 hover:shadow-lg"
 				>
@@ -134,7 +134,7 @@
 								<div class="flex items-start">
 									<span class="font-medium">Owners:</span>
 									<div class="ml-1 flex flex-wrap gap-1">
-										{#each boat.owners as owner}
+										{#each boat.owners as owner (owner.id)}
 											<button
 												onclick={() => (window.location.href = `/users/${owner.id}`)}
 												class="text-blue-600 hover:text-blue-800 hover:underline"
