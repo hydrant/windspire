@@ -13,16 +13,15 @@ pub struct SqlxUserRepository;
 
 impl UserRepository for SqlxUserRepository {
     async fn get_user_by_id(&self, pool: &PgPool, user_id: Uuid) -> Result<User, Error> {
-        let user = sqlx::query_as!(
-            User,
+        let row = sqlx::query!(
             r#"
             SELECT
-                id,
-                first_name,
-                last_name,
-                email,
+                id as "id!: Uuid",
+                first_name as "first_name!",
+                last_name as "last_name!",
+                email as "email!",
                 phone,
-                country_id,
+                country_id as "country_id!: Uuid",
                 provider_id,
                 provider_name,
                 avatar_url,
@@ -31,10 +30,24 @@ impl UserRepository for SqlxUserRepository {
             FROM users
             WHERE id = $1
             "#,
-            user_id // Pass the id to the query
+            user_id
         )
         .fetch_one(pool)
         .await?;
+
+        let user = User {
+            id: row.id,
+            first_name: row.first_name,
+            last_name: row.last_name,
+            email: row.email,
+            phone: row.phone,
+            country_id: row.country_id,
+            provider_id: row.provider_id,
+            provider_name: row.provider_name,
+            avatar_url: row.avatar_url,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        };
 
         Ok(user)
     }
@@ -42,7 +55,17 @@ impl UserRepository for SqlxUserRepository {
     async fn get_users(&self, pool: &PgPool) -> Result<Vec<UserWithCountry>, Error> {
         let rows = sqlx::query!(
             r#"
-            SELECT u.id, u.first_name, u.last_name, u.email, u.phone, u.country_id, c.iso_name, u.provider_id, u.provider_name, u.avatar_url 
+            SELECT 
+                u.id as "id!: Uuid", 
+                u.first_name as "first_name!: String", 
+                u.last_name as "last_name!: String", 
+                u.email as "email!: String", 
+                u.phone, 
+                u.country_id as "country_id!: Uuid", 
+                c.iso_name as "iso_name?: String", 
+                u.provider_id, 
+                u.provider_name, 
+                u.avatar_url 
             FROM public.users u
             LEFT JOIN public.countries c ON c.id = u.country_id
             "#
