@@ -184,7 +184,7 @@
 			<select
 				onchange={handlePageSizeChange}
 				value={boats.limit}
-				class="rounded-md border border-gray-300 px-3 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+				class="rounded-md border border-gray-300 px-3 py-1 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
 			>
 				<option value="10">10</option>
 				<option value="20">20</option>

@@ -272,7 +272,7 @@
 		aria-labelledby="drawer-title"
 	>
 		<!-- Drawer panel -->
-		<div class="fixed right-0 top-0 h-full w-full min-w-[30vw] max-w-md bg-white shadow-xl">
+		<div class="fixed top-0 right-0 h-full w-full max-w-md min-w-[30vw] bg-white shadow-xl">
 			<div class="flex h-full flex-col">
 				<!-- Header -->
 				<div class="border-b border-gray-200 px-6 py-4">
@@ -282,7 +282,7 @@
 						</h2>
 						<button
 							onclick={handleClose}
-							class="rounded-md text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+							class="rounded-md text-gray-400 hover:text-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
 						>
 							<span class="sr-only">Close</span>
 							<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -440,7 +440,7 @@
 
 				<!-- Owner Management (only when editing) -->
 				{#if editingBoat}
-					<div class="px-6 pb-6 pt-2">
+					<div class="px-6 pt-2 pb-6">
 						<h3 class="mb-3 text-lg font-medium text-gray-900">Boat Owners</h3>
 
 						<!-- Add New Owner -->
@@ -501,7 +501,7 @@
 													type="button"
 													onclick={() => handleRemoveOwner(owner)}
 													disabled={ownerLoading || editingBoat.owners.length <= 1}
-													class="inline-flex items-center rounded-md border border-transparent bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+													class="inline-flex items-center rounded-md border border-transparent bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-200 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 													title={editingBoat.owners.length <= 1
 														? 'Cannot remove the last owner'
 														: 'Remove owner'}
@@ -606,7 +606,7 @@
 						<button
 							type="button"
 							onclick={handleClose}
-							class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+							class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
 						>
 							Cancel
 						</button>
@@ -614,7 +614,7 @@
 							type="submit"
 							onclick={handleSubmit}
 							disabled={isSubmitting}
-							class="rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							class="rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							{#if isSubmitting}
 								<div class="flex items-center">

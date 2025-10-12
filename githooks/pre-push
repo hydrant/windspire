@@ -1,22 +1,64 @@
 #!/bin/bash
 
-# Run dotnet build to check for errors
-dotnet build
-
-# Check the exit code of dotnet build
-if [ $? -ne 0 ]; then
-    echo "Error: Build failed. Please fix the errors before pushing."
+# Check if we're in the right directory
+if [ ! -f "setup-hooks.sh" ]; then
+    echo "Error: Must be run from the root of the windspire repository"
     exit 1
 fi
 
-# Run tests using dotnet test
-dotnet test
+echo "🔍 Running pre-push checks..."
 
-# Check the exit code of dotnet test
-if [ $? -ne 0 ]; then
-    echo "Error: Tests failed. Please fix the failing tests before pushing."
-    exit 1
+# Check backend (if windspire_backend directory exists)
+if [ -d "windspire_backend" ]; then
+    echo "🦀 Checking Rust backend..."
+    cd windspire_backend
+    
+    # Run cargo check
+    cargo check
+    if [ $? -ne 0 ]; then
+        echo "❌ Backend build check failed. Please fix the errors before pushing."
+        exit 1
+    fi
+    
+    # Run tests
+    cargo test
+    if [ $? -ne 0 ]; then
+        echo "❌ Backend tests failed. Please fix the failing tests before pushing."
+        exit 1
+    fi
+    
+    cd ..
+    echo "✅ Backend checks passed"
 fi
 
-echo "All tests passed. Proceeding with push."
+# Check frontend (if windspire_frontend_svelte directory exists)
+if [ -d "windspire_frontend_svelte" ]; then
+    echo "🔧 Checking Svelte frontend..."
+    cd windspire_frontend_svelte
+    
+    # Check if node_modules exists
+    if [ ! -d "node_modules" ]; then
+        echo "⚠️  Installing frontend dependencies..."
+        npm install
+    fi
+    
+    # Run linting (includes prettier check and eslint)
+    npm run lint
+    if [ $? -ne 0 ]; then
+        echo "❌ Frontend linting failed. Run 'npm run format' to fix formatting issues."
+        exit 1
+    fi
+    
+    # Run build to check for compilation errors
+    npm run build
+    if [ $? -ne 0 ]; then
+        echo "❌ Frontend build failed. Please fix the compilation errors before pushing."
+        exit 1
+    fi
+    
+    cd ..
+    echo "✅ Frontend checks passed"
+fi
+
+echo "🎉 All pre-push checks passed. Proceeding with push."
 exit 0
