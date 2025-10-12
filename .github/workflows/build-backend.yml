@@ -248,10 +248,12 @@ jobs:
           name: backend-api-${{ needs.build_backend.outputs.environment }}
           path: windspire_backend/api/
 
-      # Install SQLx CLI for database migrations
+      # Install SQLx CLI for database migrations (with caching)
       - name: Install SQLx CLI
-        run: |
-          cargo install sqlx-cli --no-default-features --features rustls,postgres
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: sqlx-cli
+          features: rustls,postgres
 
       # Run database migrations
       - name: Run database migrations

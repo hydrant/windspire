@@ -140,9 +140,12 @@ jobs:
         run: cargo fmt --all -- --check
         continue-on-error: false
 
-      # Install SQLx CLI
+      # Install SQLx CLI (with caching)
       - name: Install SQLx CLI
-        run: cargo install sqlx-cli --no-default-features --features rustls,postgres
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: sqlx-cli
+          features: rustls,postgres
 
       # Setup test database
       - name: Setup test database
@@ -173,11 +176,11 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/windspire_test
 
-      # Run security audit (slowest, but important)
+      # Run security audit (fast with dedicated action)
       - name: Security audit
-        run: |
-          cargo install cargo-audit
-          cargo audit
+        uses: rustsec/audit-check@v1.4.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: false
 
   # Infrastructure validation (if infrastructure files changed)
