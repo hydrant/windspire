@@ -7,7 +7,6 @@
 	import UserProfile from './lib/pages/UserProfile.svelte';
 	// @ts-expect-error - Svelte component imports
 	import TestProfile from './lib/pages/TestProfile.svelte';
-	// @ts-expect-error - Svelte component imports
 	import Auth from './lib/pages/Auth.svelte';
 	import NotFound from './lib/pages/NotFound.svelte';
 

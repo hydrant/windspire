@@ -9,12 +9,12 @@ declare module '*.svelte' {
 declare global {
 	namespace App {
 		// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-		interface Locals { }
+		interface Locals {}
 		// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-		interface PageData { }
+		interface PageData {}
 		// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-		interface Platform { }
+		interface Platform {}
 	}
 }
 
-export { };
+export {};
