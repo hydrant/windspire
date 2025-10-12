@@ -28,12 +28,19 @@ if [ -d "windspire_backend" ]; then
     fi
     
     # Run tests
+    cargo audit
+    if [ $? -ne 0 ]; then
+        echo "❌ Backend cargo audit failed. Please fix vurlnerabilities before pushing."
+        exit 1
+    fi
+
+    # Run tests
     cargo test
     if [ $? -ne 0 ]; then
         echo "❌ Backend tests failed. Please fix the failing tests before pushing."
         exit 1
     fi
-    
+
     cd ..
     echo "✅ Backend checks passed"
 fi
