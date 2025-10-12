@@ -31,33 +31,33 @@ if [ -d "windspire_backend" ]; then
     echo "✅ Backend checks passed"
 fi
 
-# Check frontend (if windspire_frontend_svelte directory exists)
+# Check CSR frontend (if windspire_frontend_svelte_csr directory exists)
 if [ -d "windspire_frontend_svelte_csr" ]; then
-    echo "🔧 Checking Svelte frontend..."
+    echo "🔧 Checking CSR Svelte frontend..."
     cd windspire_frontend_svelte_csr
     
     # Check if node_modules exists
     if [ ! -d "node_modules" ]; then
-        echo "⚠️  Installing frontend dependencies..."
+        echo "⚠️  Installing CSR frontend dependencies..."
         npm install
     fi
     
     # Run linting (includes prettier check and eslint)
     npm run lint
     if [ $? -ne 0 ]; then
-        echo "❌ Frontend linting failed. Run 'npm run format' to fix formatting issues."
+        echo "❌ CSR Frontend linting failed. Run 'npm run format' to fix formatting issues."
         exit 1
     fi
     
     # Run build to check for compilation errors
     npm run build
     if [ $? -ne 0 ]; then
-        echo "❌ Frontend build failed. Please fix the compilation errors before pushing."
+        echo "❌ CSR Frontend build failed. Please fix the compilation errors before pushing."
         exit 1
     fi
     
     cd ..
-    echo "✅ Frontend checks passed"
+    echo "✅ CSR Frontend checks passed"
 fi
 
 echo "🎉 All pre-push checks passed. Proceeding with push."
