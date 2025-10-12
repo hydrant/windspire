@@ -40,16 +40,31 @@ impl UserRepository for SqlxUserRepository {
     }
 
     async fn get_users(&self, pool: &PgPool) -> Result<Vec<UserWithCountry>, Error> {
-        let users = sqlx::query_as!(
-            UserWithCountry,
+        let rows = sqlx::query!(
             r#"
-            SELECT u.id, u.first_name, u.last_name, u.email, u.phone, u.country_id, c.iso_name, u.provider_id, u.provider_name, u.avatar_url from public.users u
-            LEFT JOIN public.countries c
-            ON c.id = u.country_id
+            SELECT u.id, u.first_name, u.last_name, u.email, u.phone, u.country_id, c.iso_name, u.provider_id, u.provider_name, u.avatar_url 
+            FROM public.users u
+            LEFT JOIN public.countries c ON c.id = u.country_id
             "#
         )
         .fetch_all(pool)
         .await?;
+
+        let users = rows
+            .into_iter()
+            .map(|row| UserWithCountry {
+                id: row.id,
+                first_name: row.first_name,
+                last_name: row.last_name,
+                email: row.email,
+                phone: row.phone,
+                country_id: row.country_id,
+                iso_name: row.iso_name,
+                provider_id: row.provider_id,
+                provider_name: row.provider_name,
+                avatar_url: row.avatar_url,
+            })
+            .collect();
 
         Ok(users)
     }
