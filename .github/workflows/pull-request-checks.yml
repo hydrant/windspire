@@ -207,9 +207,18 @@ jobs:
           esac
           
           TARGET="${RUST_ARCH}-${RUST_OS}"
+          DOWNLOAD_URL="https://github.com/RustSec/rustsec/releases/download/cargo-audit/v${AUDIT_VERSION}/cargo-audit-${TARGET}.tar.gz"
           echo "Downloading cargo-audit for target: $TARGET"
+          echo "Download URL: $DOWNLOAD_URL"
           
-          curl -sSL "https://github.com/RustSec/rustsec/releases/download/cargo-audit/v${AUDIT_VERSION}/cargo-audit-${TARGET}.tar.gz" | tar xzf - -C ~/.cargo/bin
+          # Test if the URL exists first
+          if curl --output /dev/null --silent --head --fail "$DOWNLOAD_URL"; then
+            echo "URL exists, downloading..."
+            curl -sSL "$DOWNLOAD_URL" | tar xzf - -C ~/.cargo/bin
+          else
+            echo "Precompiled binary not available, falling back to cargo install..."
+            cargo install cargo-audit --features=fix
+          fi
       
       - name: Security audit
         run: |
