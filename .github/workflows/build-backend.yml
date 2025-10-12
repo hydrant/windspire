@@ -1,0 +1,285 @@
+# Backend Build and Deployment
+#
+# Builds and deploys the backend API to Azure Functions
+# - Only runs on tagged releases for controlled deployments
+# - Focuses purely on building and deploying artifacts (no quality checks)
+# - Depends on infrastructure pipeline to provide deployment targets
+#
+# DEPENDENCY: Requires build-infrastructure.yml to run first and set Azure resources
+
+name: Backend Build
+
+on:
+  push:
+    tags:
+      - 'dev*'
+      - 'staging*'
+      - 'prod*'
+  workflow_run:
+    workflows: ["Infrastructure Build"]
+    types:
+      - completed
+    branches:
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Build job - creates production artifacts
+  build_backend:
+    # Only run on successful infrastructure deployment or direct tag pushes
+    if: >
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+    runs-on: ubuntu-latest
+    name: Build Backend
+    defaults:
+      run:
+        working-directory: windspire_backend
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Determine environment from tag
+      - name: Determine Environment
+        id: env
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/prod* ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/staging* ]]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          else
+            echo "environment=development" >> $GITHUB_OUTPUT
+          fi
+
+      # Set up Rust with musl target for static linking
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+
+      # Cache dependencies for faster builds
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            windspire_backend/target/
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('windspire_backend/**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-release-
+            ${{ runner.os }}-cargo-
+
+      # Build for production with static linking
+      - name: Build for production
+        run: |
+          cargo build --release --target x86_64-unknown-linux-musl
+          ls -la target/x86_64-unknown-linux-musl/release/
+        env:
+          # Use a placeholder DATABASE_URL for build - real one set during deployment
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+
+      # Prepare Azure Functions structure
+      - name: Prepare Azure Functions
+        run: |
+          chmod +x target/x86_64-unknown-linux-musl/release/windspire_backend
+          
+          # Create Azure Functions API structure
+          mkdir -p api
+          cp target/x86_64-unknown-linux-musl/release/windspire_backend api/
+          
+          # Create host.json for Azure Functions runtime
+          cat > api/host.json << 'EOF'
+          {
+            "version": "2.0",
+            "logging": {
+              "applicationInsights": {
+                "samplingSettings": {
+                  "isEnabled": true,
+                  "excludedTypes": "Request"
+                }
+              }
+            },
+            "extensionBundle": {
+              "id": "Microsoft.Azure.Functions.ExtensionBundle",
+              "version": "[3.*, 4.0.0)"
+            },
+            "functionTimeout": "00:10:00"
+          }
+          EOF
+          
+          # Create function.json files for each API endpoint
+          mkdir -p api/users api/boats api/countries api/auth api/health
+          
+          # Users API endpoint
+          cat > api/users/function.json << 'EOF'
+          {
+            "bindings": [
+              {
+                "authLevel": "anonymous",
+                "type": "httpTrigger",
+                "direction": "in",
+                "name": "req",
+                "methods": ["get", "post", "put", "delete"],
+                "route": "users/{*restOfPath:alpha?}"
+              },
+              {
+                "type": "http",
+                "direction": "out",
+                "name": "res"
+              }
+            ]
+          }
+          EOF
+          
+          # Boats API endpoint
+          cat > api/boats/function.json << 'EOF'
+          {
+            "bindings": [
+              {
+                "authLevel": "anonymous",
+                "type": "httpTrigger",
+                "direction": "in",
+                "name": "req",
+                "methods": ["get", "post", "put", "delete"],
+                "route": "boats/{*restOfPath:alpha?}"
+              },
+              {
+                "type": "http",
+                "direction": "out",
+                "name": "res"
+              }
+            ]
+          }
+          EOF
+          
+          # Countries API endpoint
+          cat > api/countries/function.json << 'EOF'
+          {
+            "bindings": [
+              {
+                "authLevel": "anonymous",
+                "type": "httpTrigger",
+                "direction": "in",
+                "name": "req",
+                "methods": ["get"],
+                "route": "countries/{*restOfPath:alpha?}"
+              },
+              {
+                "type": "http",
+                "direction": "out",
+                "name": "res"
+              }
+            ]
+          }
+          EOF
+          
+          # Auth API endpoint
+          cat > api/auth/function.json << 'EOF'
+          {
+            "bindings": [
+              {
+                "authLevel": "anonymous",
+                "type": "httpTrigger",
+                "direction": "in",
+                "name": "req",
+                "methods": ["get", "post"],
+                "route": "auth/{*restOfPath:alpha?}"
+              },
+              {
+                "type": "http",
+                "direction": "out",
+                "name": "res"
+              }
+            ]
+          }
+          EOF
+          
+          # Health check endpoint
+          cat > api/health/function.json << 'EOF'
+          {
+            "bindings": [
+              {
+                "authLevel": "anonymous",
+                "type": "httpTrigger",
+                "direction": "in",
+                "name": "req",
+                "methods": ["get"],
+                "route": "health"
+              },
+              {
+                "type": "http",
+                "direction": "out",
+                "name": "res"
+              }
+            ]
+          }
+          EOF
+
+      # Upload build artifacts for deployment
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-api-${{ steps.env.outputs.environment }}
+          path: windspire_backend/api/
+          retention-days: 7
+
+  # Deploy job - deploys to Azure Functions
+  deploy_backend:
+    needs: build_backend
+    runs-on: ubuntu-latest
+    name: Deploy Backend
+    environment: ${{ needs.build_backend.outputs.environment }}
+    defaults:
+      run:
+        working-directory: windspire_backend
+    steps:
+      - uses: actions/checkout@v4
+
+      # Download build artifacts
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-api-${{ needs.build_backend.outputs.environment }}
+          path: windspire_backend/api/
+
+      # Install SQLx CLI for database migrations
+      - name: Install SQLx CLI
+        run: |
+          cargo install sqlx-cli --no-default-features --features rustls,postgres
+
+      # Run database migrations
+      - name: Run database migrations
+        run: |
+          sqlx migrate run
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      # Deploy to Azure Functions (placeholder - needs Azure Functions CLI or ARM template)
+      - name: Deploy to Azure Functions
+        run: |
+          echo "✅ Backend build completed successfully!"
+          echo "🗄️ Environment: ${{ needs.build_backend.outputs.environment }}"
+          echo "📦 API artifacts prepared in: api/"
+          echo "🚀 Database migrations applied"
+          echo ""
+          echo "📝 Next steps for deployment:"
+          echo "   1. Set up Azure Functions App if not exists"
+          echo "   2. Configure environment variables in Azure:"
+          echo "      - DATABASE_URL: ${{ secrets.DATABASE_URL }}"
+          echo "      - CORS_ALLOWED_ORIGINS: Frontend URL"
+          echo "      - FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}"
+          echo "   3. Deploy API artifacts to Azure Functions"
+          echo ""
+          echo "💡 Consider using Azure Functions Core Tools or ARM template for deployment"
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CORS_ALLOWED_ORIGINS: ${{ secrets.AZURE_STATIC_WEB_APP_URL }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+          FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
