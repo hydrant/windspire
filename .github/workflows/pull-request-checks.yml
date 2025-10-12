@@ -179,8 +179,8 @@ jobs:
       # Run security audit (precompiled binary - fastest)
       - name: Install cargo-audit (precompiled)
         run: |
-          # Get the latest version from GitHub API (releases/latest endpoint)
-          AUDIT_VERSION=$(curl -s https://api.github.com/repos/RustSec/rustsec/releases/latest | jq -r '.tag_name' | sed 's/^cargo-audit\/v//')
+          # Get the latest cargo-audit version from GitHub API
+          AUDIT_VERSION=$(curl -s https://api.github.com/repos/RustSec/rustsec/releases | jq -r '.[] | select(.tag_name | startswith("cargo-audit/v")) | .tag_name' | head -1 | sed 's/^cargo-audit\/v//')
           echo "Latest cargo-audit version: $AUDIT_VERSION"
           
           # Fallback to a known working version if API fails
