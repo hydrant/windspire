@@ -176,54 +176,16 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/windspire_test
 
-      # Run security audit (precompiled binary - fastest)
-      - name: Install cargo-audit (precompiled)
-        run: |
-          # Get the latest cargo-audit version from GitHub API
-          AUDIT_VERSION=$(curl -s https://api.github.com/repos/RustSec/rustsec/releases | jq -r '.[] | select(.tag_name | startswith("cargo-audit/v")) | .tag_name' | head -1 | sed 's/^cargo-audit\/v//')
-          echo "Latest cargo-audit version: $AUDIT_VERSION"
-          
-          # Fallback to a known working version if API fails
-          if [ "$AUDIT_VERSION" = "null" ] || [ -z "$AUDIT_VERSION" ]; then
-            AUDIT_VERSION="0.18.3"
-            echo "API failed, using fallback version: $AUDIT_VERSION"
-          fi
-          
-          ARCH=$(uname -m)
-          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-          
-          # Map architecture names to Rust target names
-          case $ARCH in
-            x86_64) RUST_ARCH="x86_64" ;;
-            aarch64|arm64) RUST_ARCH="aarch64" ;;
-            *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
-          esac
-          
-          # Map OS names to Rust target names  
-          case $OS in
-            linux) RUST_OS="unknown-linux-gnu" ;;
-            darwin) RUST_OS="apple-darwin" ;;
-            *) echo "Unsupported OS: $OS"; exit 1 ;;
-          esac
-          
-          TARGET="${RUST_ARCH}-${RUST_OS}"
-          DOWNLOAD_URL="https://github.com/RustSec/rustsec/releases/download/cargo-audit/v${AUDIT_VERSION}/cargo-audit-${TARGET}.tar.gz"
-          echo "Downloading cargo-audit for target: $TARGET"
-          echo "Download URL: $DOWNLOAD_URL"
-          
-          # Test if the URL exists first
-          if curl --output /dev/null --silent --head --fail "$DOWNLOAD_URL"; then
-            echo "URL exists, downloading..."
-            curl -sSL "$DOWNLOAD_URL" | tar xzf - -C ~/.cargo/bin
-          else
-            echo "Precompiled binary not available, falling back to cargo install..."
-            cargo install cargo-audit --features=fix
-          fi
+      # Run security audit (with caching)
+      - name: Install cargo-audit
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: cargo-audit
+          features: fix
       
       - name: Security audit
-        run: |
-          cd windspire_backend
-          cargo audit
+        working-directory: windspire_backend
+        run: cargo audit
         continue-on-error: false
 
   # Infrastructure validation (if infrastructure files changed)
