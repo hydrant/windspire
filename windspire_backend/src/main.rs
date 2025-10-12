@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use application::approuter;
 use application::config::AppConfig;
 use application::services::{firebase_service::FirebaseService, jwt_service::JwtService};
@@ -54,7 +56,7 @@ async fn main() -> () {
         config
             .server_address
             .split(':')
-            .last()
+            .next_back()
             .unwrap_or("8080")
             .to_string()
     });

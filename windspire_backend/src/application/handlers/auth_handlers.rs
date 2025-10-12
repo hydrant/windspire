@@ -149,22 +149,19 @@ pub async fn firebase_auth_handler(
     );
 
     // Verify Firebase ID token
-    let firebase_user = match {
-        #[cfg(debug_assertions)]
-        {
-            app_state
-                .firebase_service
-                .verify_id_token_unsafe(&payload.id_token)
-                .await
-        }
-        #[cfg(not(debug_assertions))]
-        {
-            app_state
-                .firebase_service
-                .verify_id_token(&payload.id_token)
-                .await
-        }
-    } {
+    #[cfg(debug_assertions)]
+    let firebase_result = app_state
+        .firebase_service
+        .verify_id_token_unsafe(&payload.id_token)
+        .await;
+
+    #[cfg(not(debug_assertions))]
+    let firebase_result = app_state
+        .firebase_service
+        .verify_id_token(&payload.id_token)
+        .await;
+
+    let firebase_user = match firebase_result {
         Ok(user) => user,
         Err(e) => {
             tracing::error!("Firebase token verification failed: {}", e);
@@ -355,9 +352,8 @@ pub async fn firebase_auth_handler(
 
                     let display_name = payload
                         .display_name
-                        .as_ref()
-                        .map(|s| s.as_str())
-                        .or_else(|| firebase_user.name.as_ref().map(|s| s.as_str()))
+                        .as_deref()
+                        .or(firebase_user.name.as_deref())
                         .unwrap_or("Firebase User");
 
                     tracing::info!("Using display_name: {}", display_name);

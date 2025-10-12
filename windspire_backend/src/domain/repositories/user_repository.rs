@@ -67,18 +67,4 @@ pub(crate) trait UserRepository {
         pool: &PgPool,
         user_id: Uuid,
     ) -> impl Future<Output = Result<UserWithRoles, Error>>;
-
-    fn assign_role_to_user(
-        &self,
-        pool: &PgPool,
-        user_id: Uuid,
-        role_id: Uuid,
-    ) -> impl Future<Output = Result<(), Error>>;
-
-    fn remove_role_from_user(
-        &self,
-        pool: &PgPool,
-        user_id: Uuid,
-        role_id: Uuid,
-    ) -> impl Future<Output = Result<(), Error>>;
 }

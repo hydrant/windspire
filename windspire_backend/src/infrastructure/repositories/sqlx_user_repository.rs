@@ -98,7 +98,7 @@ impl UserRepository for SqlxUserRepository {
         user_create: UserCreate,
     ) -> Result<User, sqlx::Error> {
         // Generate UUID v7 id
-        let ts = Timestamp::now(&NoContext);
+        let ts = Timestamp::now(NoContext);
         let id = Uuid::new_v7(ts);
         let now = Utc::now();
         let user = sqlx::query_as!(
@@ -205,7 +205,7 @@ impl UserRepository for SqlxUserRepository {
         pool: &PgPool,
         user: &OAuthUserCreate,
     ) -> Result<User, Error> {
-        let ts = Timestamp::now(&NoContext);
+        let ts = Timestamp::now(NoContext);
         let id = Uuid::new_v7(ts);
         let now = Utc::now();
 
@@ -332,39 +332,5 @@ impl UserRepository for SqlxUserRepository {
             roles,
             permissions,
         })
-    }
-
-    async fn assign_role_to_user(
-        &self,
-        pool: &PgPool,
-        user_id: Uuid,
-        role_id: Uuid,
-    ) -> Result<(), Error> {
-        sqlx::query!(
-            "INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-            user_id,
-            role_id
-        )
-        .execute(pool)
-        .await?;
-
-        Ok(())
-    }
-
-    async fn remove_role_from_user(
-        &self,
-        pool: &PgPool,
-        user_id: Uuid,
-        role_id: Uuid,
-    ) -> Result<(), Error> {
-        sqlx::query!(
-            "DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2",
-            user_id,
-            role_id
-        )
-        .execute(pool)
-        .await?;
-
-        Ok(())
     }
 }

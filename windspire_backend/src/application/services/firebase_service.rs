@@ -81,7 +81,6 @@ pub struct FirebasePublicKey {
 pub struct FirebaseService {
     project_id: String,
     client: Client,
-    public_keys_cache: Option<HashMap<String, FirebasePublicKey>>,
 }
 
 impl FirebaseService {
@@ -89,7 +88,6 @@ impl FirebaseService {
         Self {
             project_id,
             client: Client::new(),
-            public_keys_cache: None,
         }
     }
 
@@ -117,7 +115,7 @@ impl FirebaseService {
             "https://securetoken.google.com/{}",
             self.project_id
         )]);
-        validation.set_audience(&[self.project_id.clone()]);
+        validation.set_audience(std::slice::from_ref(&self.project_id));
 
         // Decode and validate token
         let token_data = decode::<FirebaseTokenClaims>(id_token, &decoding_key, &validation)
@@ -195,7 +193,7 @@ impl FirebaseService {
             "https://securetoken.google.com/{}",
             self.project_id
         )]);
-        validation.set_audience(&[self.project_id.clone()]);
+        validation.set_audience(std::slice::from_ref(&self.project_id));
 
         let token_data = decode::<FirebaseTokenClaims>(
             id_token,
