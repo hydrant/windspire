@@ -21,9 +21,33 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # Detect changed files
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.changes.outputs.frontend }}
+      backend: ${{ steps.changes.outputs.backend }}
+      infrastructure: ${{ steps.changes.outputs.infrastructure }}
+      workflows: ${{ steps.changes.outputs.workflows }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            frontend:
+              - 'windspire_frontend_svelte_csr/**'
+            backend:
+              - 'windspire_backend/**'
+            infrastructure:
+              - 'infrastructure/**'
+            workflows:
+              - '.github/workflows/**'
+
   # Frontend quality checks
   frontend_checks:
-    if: ${{ contains(github.event.pull_request.changed_files, 'windspire_frontend_svelte_csr/') || contains(github.event.pull_request.changed_files, '.github/workflows/') }}
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflows == 'true' }}
     runs-on: ubuntu-latest
     name: Frontend Quality Checks
     defaults:
@@ -68,7 +92,8 @@ jobs:
 
   # Backend quality checks
   backend_checks:
-    if: ${{ contains(github.event.pull_request.changed_files, 'windspire_backend/') || contains(github.event.pull_request.changed_files, '.github/workflows/') }}
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' || needs.changes.outputs.workflows == 'true' }}
     runs-on: ubuntu-latest
     name: Backend Quality Checks
     defaults:
@@ -150,7 +175,8 @@ jobs:
 
   # Security audit for backend
   security_audit:
-    if: ${{ contains(github.event.pull_request.changed_files, 'windspire_backend/') || contains(github.event.pull_request.changed_files, '.github/workflows/') }}
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' || needs.changes.outputs.workflows == 'true' }}
     runs-on: ubuntu-latest
     name: Security Audit
     defaults:
@@ -174,7 +200,8 @@ jobs:
 
   # Infrastructure validation (if infrastructure files changed)
   infrastructure_checks:
-    if: ${{ contains(github.event.pull_request.changed_files, 'infrastructure/') || contains(github.event.pull_request.changed_files, '.github/workflows/') }}
+    needs: changes
+    if: ${{ needs.changes.outputs.infrastructure == 'true' || needs.changes.outputs.workflows == 'true' }}
     runs-on: ubuntu-latest
     name: Infrastructure Validation
     steps:
@@ -200,7 +227,7 @@ jobs:
 
   # Summary job that depends on all checks
   all_checks_passed:
-    needs: [frontend_checks, backend_checks, security_audit, infrastructure_checks]
+    needs: [changes, frontend_checks, backend_checks, security_audit, infrastructure_checks]
     if: always()
     runs-on: ubuntu-latest
     name: All Quality Checks
