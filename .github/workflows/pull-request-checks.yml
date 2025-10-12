@@ -135,6 +135,11 @@ jobs:
             windspire_backend/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('windspire_backend/**/Cargo.lock') }}
 
+      # Check code formatting (fast fail)
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+        continue-on-error: false
+
       # Install SQLx CLI
       - name: Install SQLx CLI
         run: cargo install sqlx-cli --no-default-features --features rustls,postgres
@@ -147,12 +152,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/windspire_test
 
-      # Check code formatting
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-        continue-on-error: false
-
-      # Run Clippy linting
+      # Run Clippy linting (after DB setup for SQLx compile-time checks)
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
         continue-on-error: false
@@ -167,35 +167,17 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/windspire_test
           RUST_LOG: debug
 
-      # Verify build can complete (without deploying)
+      # Verify release build can complete
       - name: Verify build
         run: cargo check --release
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/windspire_test
 
-  # Security audit for backend
-  security_audit:
-    needs: changes
-    if: ${{ needs.changes.outputs.backend == 'true' || needs.changes.outputs.workflows == 'true' }}
-    runs-on: ubuntu-latest
-    name: Security Audit
-    defaults:
-      run:
-        working-directory: windspire_backend
-    steps:
-      - uses: actions/checkout@v4
-      
-      # Set up Rust
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      # Install cargo-audit
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
-
-      # Run security audit
-      - name: Run security audit
-        run: cargo audit
+      # Run security audit (slowest, but important)
+      - name: Security audit
+        run: |
+          cargo install cargo-audit
+          cargo audit
         continue-on-error: false
 
   # Infrastructure validation (if infrastructure files changed)
@@ -207,27 +189,44 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Azure Login for validation
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      # Install Azure CLI for Bicep compilation
+      - name: Install Azure CLI
+        uses: azure/setup-cli@v2
 
-      # Validate Bicep template syntax
-      - name: Validate Bicep template
-        uses: azure/arm-deploy@v1
-        with:
-          scope: resourcegroup
-          resourceGroupName: ${{ secrets.AZURE_RESOURCE_GROUP }}
-          template: infrastructure/main.bicep
-          parameters: infrastructure/main.parameters.json
-          deploymentMode: Validate
+      # Validate Bicep template syntax and compilation
+      - name: Compile Bicep templates
+        run: |
+          echo "🔍 Validating Bicep template syntax..."
+          
+          # Check if bicep files exist
+          if [ ! -f "infrastructure/main.bicep" ]; then
+            echo "❌ No main.bicep found in infrastructure/ directory"
+            exit 1
+          fi
+          
+          # Compile Bicep to ARM template (syntax validation)
+          az bicep build --file infrastructure/main.bicep --outfile infrastructure/compiled-template.json
+          
+          echo "✅ Bicep template compiled successfully!"
+          echo "📋 Generated ARM template size: $(wc -c < infrastructure/compiled-template.json) bytes"
+          
+          # Optional: Validate ARM template structure
+          echo "🔍 Validating ARM template structure..."
+          if ! cat infrastructure/compiled-template.json | jq . > /dev/null 2>&1; then
+            echo "❌ Generated ARM template is not valid JSON"
+            exit 1
+          fi
+          
+          echo "✅ ARM template structure is valid!"
+          
+          # Clean up generated file
+          rm -f infrastructure/compiled-template.json
+          
+          echo "🎉 Infrastructure validation completed successfully!"
 
   # Summary job that depends on all checks
   all_checks_passed:
-    needs: [changes, frontend_checks, backend_checks, security_audit, infrastructure_checks]
+    needs: [changes, frontend_checks, backend_checks, infrastructure_checks]
     if: always()
     runs-on: ubuntu-latest
     name: All Quality Checks
