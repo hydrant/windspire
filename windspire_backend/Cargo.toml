@@ -29,7 +29,10 @@ once_cell = "1.21.3"
 regex = "1.11.1"
 # Authentication and authorization dependencies
 jsonwebtoken = "9.3.1"
-reqwest = { version = "0.12.22", features = ["json"] }
+reqwest = { version = "0.12.22", features = [
+    "json",
+    "rustls-tls",
+], default-features = false }
 tower-http = { version = "0.6.2", features = ["cors"] }
 chrono = { version = "0.4.39", features = ["serde"] }
 base64 = "0.22.1"
