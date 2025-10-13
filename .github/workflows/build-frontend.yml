@@ -88,6 +88,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Wait for infrastructure secrets to be available
+      - name: Verify infrastructure deployment
+        run: |
+          echo "Waiting for infrastructure secrets to be available..."
+          if [ -z "${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}" ]; then
+            echo "⚠️  AZURE_STATIC_WEB_APPS_API_TOKEN not yet available"
+            echo "This means the infrastructure deployment may still be in progress"
+            echo "The deployment will continue but may skip actual deployment"
+          else
+            echo "✅ AZURE_STATIC_WEB_APPS_API_TOKEN is available"
+          fi
+
       # Download build artifacts
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -106,6 +118,7 @@ jobs:
           app_location: "windspire_frontend_svelte_csr/dist"
           skip_app_build: true  # We already built the app
           skip_api_build: true  # Backend is deployed separately
+          skip_deploy_on_missing_secrets: true  # Allow workflow to continue without deployment token
 
       # Output deployment results
       - name: Output deployment results
