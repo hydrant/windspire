@@ -60,6 +60,12 @@ jobs:
         with:
           targets: x86_64-unknown-linux-musl
 
+      # Install musl development tools for cross-compilation
+      - name: Install musl tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools musl-dev
+
       # Cache dependencies for faster builds
       - name: Cache dependencies
         uses: actions/cache@v4
