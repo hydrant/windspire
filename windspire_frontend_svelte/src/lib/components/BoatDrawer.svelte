@@ -272,7 +272,7 @@
 		aria-labelledby="drawer-title"
 	>
 		<!-- Drawer panel -->
-		<div class="fixed top-0 right-0 h-full w-full min-w-[30vw] max-w-md bg-white shadow-xl">
+		<div class="fixed top-0 right-0 h-full w-full max-w-md min-w-[30vw] bg-white shadow-xl">
 			<div class="flex h-full flex-col">
 				<!-- Header -->
 				<div class="border-b border-gray-200 px-6 py-4">
@@ -403,7 +403,7 @@
 								required
 							>
 								<option value="">Select a country</option>
-								{#each countries as country}
+								{#each countries as country (country.id)}
 									<option value={country.id}>{country.name} ({country.isoAlpha2})</option>
 								{/each}
 							</select>
@@ -457,74 +457,78 @@
 						<!-- Current Owners -->
 						<div class="mb-4">
 							{#if editingBoat.owners && editingBoat.owners.length > 0}
-								<div class="max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-1">
+								<div class="max-h-48 overflow-y-auto rounded-lg border border-gray-200 p-1">
 									<div class="space-y-1">
-										{#each editingBoat.owners as owner, index}
-										<div class="flex items-center justify-between bg-gray-50 p-2 rounded {index > 0 ? '' : ''}">
-											<div class="flex items-center space-x-3">
-												<!-- Avatar -->
-												{#if owner.avatarUrl}
-													<img
-														class="h-8 w-8 rounded-full"
-														src={owner.avatarUrl}
-														alt="{owner.firstName} {owner.lastName}"
-													/>
-												{:else}
-													<div
-														class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100"
-													>
-														<span class="text-xs font-medium text-blue-700">
-															{owner.firstName.charAt(0)}{owner.lastName.charAt(0)}
-														</span>
-													</div>
-												{/if}
-
-												<!-- Owner Info -->
-												<div>
-													<p class="text-sm font-medium text-gray-900">
-														{owner.firstName}
-														{owner.lastName}
-													</p>
-													<p class="text-sm text-gray-500">{owner.email}</p>
-													{#if owner.isoName}
-														<p class="text-xs text-gray-400">{owner.isoName}</p>
-													{/if}
-												</div>
-											</div>
-
-											<!-- Remove Button -->
-											<button
-												type="button"
-												onclick={() => handleRemoveOwner(owner)}
-												disabled={ownerLoading || editingBoat.owners.length <= 1}
-												class="inline-flex items-center rounded-md border border-transparent bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-200 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-												title={editingBoat.owners.length <= 1
-													? 'Cannot remove the last owner'
-													: 'Remove owner'}
+										{#each editingBoat.owners as owner, index (owner.id)}
+											<div
+												class="flex items-center justify-between rounded bg-gray-50 p-2 {index > 0
+													? ''
+													: ''}"
 											>
-												{#if ownerLoading}
-													<div
-														class="mr-1 h-3 w-3 animate-spin rounded-full border border-red-700 border-t-transparent"
-													></div>
-												{:else}
-													<svg
-														class="mr-1 h-3 w-3"
-														fill="none"
-														viewBox="0 0 24 24"
-														stroke="currentColor"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+												<div class="flex items-center space-x-3">
+													<!-- Avatar -->
+													{#if owner.avatarUrl}
+														<img
+															class="h-8 w-8 rounded-full"
+															src={owner.avatarUrl}
+															alt="{owner.firstName} {owner.lastName}"
 														/>
-													</svg>
-												{/if}
-												Remove
-											</button>
-										</div>
-									{/each}
+													{:else}
+														<div
+															class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100"
+														>
+															<span class="text-xs font-medium text-blue-700">
+																{owner.firstName.charAt(0)}{owner.lastName.charAt(0)}
+															</span>
+														</div>
+													{/if}
+
+													<!-- Owner Info -->
+													<div>
+														<p class="text-sm font-medium text-gray-900">
+															{owner.firstName}
+															{owner.lastName}
+														</p>
+														<p class="text-sm text-gray-500">{owner.email}</p>
+														{#if owner.isoName}
+															<p class="text-xs text-gray-400">{owner.isoName}</p>
+														{/if}
+													</div>
+												</div>
+
+												<!-- Remove Button -->
+												<button
+													type="button"
+													onclick={() => handleRemoveOwner(owner)}
+													disabled={ownerLoading || editingBoat.owners.length <= 1}
+													class="inline-flex items-center rounded-md border border-transparent bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-200 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+													title={editingBoat.owners.length <= 1
+														? 'Cannot remove the last owner'
+														: 'Remove owner'}
+												>
+													{#if ownerLoading}
+														<div
+															class="mr-1 h-3 w-3 animate-spin rounded-full border border-red-700 border-t-transparent"
+														></div>
+													{:else}
+														<svg
+															class="mr-1 h-3 w-3"
+															fill="none"
+															viewBox="0 0 24 24"
+															stroke="currentColor"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+															/>
+														</svg>
+													{/if}
+													Remove
+												</button>
+											</div>
+										{/each}
 									</div>
 								</div>
 							{:else}

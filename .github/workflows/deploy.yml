@@ -1,0 +1,118 @@
+# Master Deployment Workflow
+#
+# Orchestrates the complete deployment process:
+# 1. Deploy infrastructure first (Static Web App, PostgreSQL, Key Vault)
+# 2. Deploy backend code to the Static Web App API
+# 3. Deploy frontend code to the Static Web App
+#
+# This ensures proper sequencing and that all resources are ready before code deployment
+
+name: Deploy Application
+
+on:
+  push:
+    tags:
+      - 'dev*'
+      - 'staging*'
+      - 'prod*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging
+        - prod
+
+jobs:
+  # Step 0: Determine the environment name
+  determine_environment:
+    runs-on: ubuntu-latest
+    outputs:
+      env_name: ${{ steps.get_env.outputs.env_name }}
+    steps:
+      - name: Determine environment name
+        id: get_env
+        run: |
+          ENV_NAME=${{ github.event.inputs.environment || (startsWith(github.ref, 'refs/tags/prod') && 'prod' || startsWith(github.ref, 'refs/tags/staging') && 'staging' || 'dev') }}
+          echo "env_name=$ENV_NAME" >> $GITHUB_OUTPUT
+
+
+  # Step 1: Deploy infrastructure first
+  infrastructure:
+    needs: determine_environment
+    uses: ./.github/workflows/build-infrastructure.yml
+    with:
+      environment: ${{ needs.determine_environment.outputs.env_name }}
+    secrets: 
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+      FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+      FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+      FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+      POSTGRES_ADMIN_LOGIN: ${{ secrets.POSTGRES_ADMIN_LOGIN }}
+      FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+      POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+  # Step 2: Build backend artifacts (parallel with frontend after infrastructure)
+  backend:
+    needs: [determine_environment, infrastructure]
+    uses: ./.github/workflows/build-backend.yml
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}    
+    with:
+      environment: ${{ needs.determine_environment.outputs.env_name }}
+      function-app-name: ${{ needs.infrastructure.outputs.function-app-name }}
+
+  # Step 3: Deploy frontend (parallel with backend after infrastructure)
+  frontend:
+    needs: [determine_environment, infrastructure]
+    uses: ./.github/workflows/build-frontend.yml
+    secrets: 
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
+      FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+      FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+      FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+      FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+      FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+      FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+    with:
+      environment: ${{ needs.determine_environment.outputs.env_name }}
+      static-web-app-url: ${{ needs.infrastructure.outputs.static-web-app-url }}
+      deployment-token: ${{ needs.infrastructure.outputs.deployment-token }}
+      function-app-name: ${{ needs.infrastructure.outputs.function-app-name }}
+
+  # Step 4: Final verification and summary
+  summary:
+    needs: [infrastructure, backend, frontend]
+    runs-on: ubuntu-latest
+    name: Deployment Summary
+    steps:
+      - name: Deployment Complete
+        run: |
+          echo "🎉 Complete deployment successful!"
+          echo ""
+          echo "📊 Infrastructure:"
+          echo "   - Static Web App: ${{ needs.infrastructure.outputs.static-web-app-url }}"
+          echo "   - Function App: ${{ needs.infrastructure.outputs.function-app-name }}"
+          echo "   - PostgreSQL: ${{ needs.infrastructure.outputs.postgres-server-name }}"
+          echo "   - Key Vault: ${{ needs.infrastructure.outputs.key-vault-name }}"
+          echo ""
+          echo "🚀 Application is live and ready!"
+          echo "   - Frontend: ${{ needs.infrastructure.outputs.static-web-app-url }}"
+          echo "   - Backend API: https://${{ needs.infrastructure.outputs.function-app-name }}.azurewebsites.net/api"
+          echo ""
+          echo "📦 Deployment included:"
+          echo "   ✅ Frontend (Svelte) deployed to Static Web App"
+          echo "   ✅ Backend (Rust) deployed to Function App with custom handlers"
+          echo "   ✅ Database migrations handled by application startup"

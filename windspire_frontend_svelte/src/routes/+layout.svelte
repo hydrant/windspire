@@ -44,7 +44,7 @@
 					user = null;
 					userStore.set(null);
 				}
-			} catch (error) {
+			} catch {
 				console.log('Failed to get user info, removing token');
 				localStorage.removeItem('windspire_token');
 				user = null;
@@ -127,19 +127,18 @@
 					alert(`Authentication verification failed: ${response.status} - ${errorText}`);
 				}
 			}
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Google sign-in error:', error);
 
 			// Show user-friendly error message
 			let errorMessage = 'Google sign-in failed. ';
-			if (error.message) {
-				errorMessage += error.message;
+			if (error && typeof error === 'object' && 'message' in error) {
+				errorMessage += (error as { message: string }).message;
 			} else {
-				errorMessage += 'Please try again or use email/password login.';
+				errorMessage += 'Please try again.';
 			}
 			alert(errorMessage);
 			closeLoginModal();
-			alert(error.message || 'Google sign-in failed. Please try again.');
 		}
 	}
 

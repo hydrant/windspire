@@ -65,7 +65,7 @@ impl RoleRepository for SqlxRoleRepository {
         name: &str,
         description: Option<&str>,
     ) -> Result<Role, Error> {
-        let ts = Timestamp::now(&NoContext);
+        let ts = Timestamp::now(NoContext);
         let id = Uuid::new_v7(ts);
         let now = Utc::now();
 

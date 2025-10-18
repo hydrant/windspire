@@ -29,10 +29,6 @@ pub struct PaginatedResult<T> {
 }
 
 pub(crate) trait BoatRepository {
-    async fn get_by_id(&self, pool: &PgPool, id: Uuid) -> Result<Boat, Error>;
-
-    async fn get_all(&self, pool: &PgPool) -> Result<Vec<Boat>, Error>;
-
     async fn get_paginated(
         &self,
         pool: &PgPool,

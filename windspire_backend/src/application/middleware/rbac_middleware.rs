@@ -30,6 +30,7 @@ impl RequiredPermission {
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub fn require_permission(
     permission: RequiredPermission,
 ) -> impl Fn(
@@ -94,7 +95,7 @@ async fn check_permission(
     Err((StatusCode::FORBIDDEN, "Insufficient permissions"))
 }
 
-// Convenience functions for common permission checks
+#[allow(clippy::type_complexity)]
 pub fn require_users_read() -> impl Fn(
     Request,
     Next,
@@ -104,6 +105,7 @@ pub fn require_users_read() -> impl Fn(
     require_permission(RequiredPermission::with_own_access(PERMISSION_USERS_READ))
 }
 
+#[allow(clippy::type_complexity)]
 pub fn require_users_write() -> impl Fn(
     Request,
     Next,
@@ -113,6 +115,7 @@ pub fn require_users_write() -> impl Fn(
     require_permission(RequiredPermission::with_own_access(PERMISSION_USERS_WRITE))
 }
 
+#[allow(clippy::type_complexity)]
 pub fn require_users_delete() -> impl Fn(
     Request,
     Next,
@@ -122,6 +125,7 @@ pub fn require_users_delete() -> impl Fn(
     require_permission(RequiredPermission::new(PERMISSION_USERS_DELETE))
 }
 
+#[allow(clippy::type_complexity)]
 pub fn require_countries_read() -> impl Fn(
     Request,
     Next,
@@ -131,6 +135,7 @@ pub fn require_countries_read() -> impl Fn(
     require_permission(RequiredPermission::new(PERMISSION_COUNTRIES_READ))
 }
 
+#[allow(clippy::type_complexity)]
 pub fn require_countries_write() -> impl Fn(
     Request,
     Next,
@@ -140,6 +145,7 @@ pub fn require_countries_write() -> impl Fn(
     require_permission(RequiredPermission::new(PERMISSION_COUNTRIES_WRITE))
 }
 
+#[allow(clippy::type_complexity)]
 pub fn require_countries_delete() -> impl Fn(
     Request,
     Next,
@@ -149,6 +155,7 @@ pub fn require_countries_delete() -> impl Fn(
     require_permission(RequiredPermission::new(PERMISSION_COUNTRIES_DELETE))
 }
 
+#[allow(clippy::type_complexity)]
 pub fn require_boats_read() -> impl Fn(
     Request,
     Next,
@@ -158,6 +165,7 @@ pub fn require_boats_read() -> impl Fn(
     require_permission(RequiredPermission::new(PERMISSION_BOATS_READ))
 }
 
+#[allow(clippy::type_complexity)]
 pub fn require_boats_write() -> impl Fn(
     Request,
     Next,
@@ -167,6 +175,7 @@ pub fn require_boats_write() -> impl Fn(
     require_permission(RequiredPermission::new(PERMISSION_BOATS_WRITE))
 }
 
+#[allow(clippy::type_complexity)]
 pub fn require_boats_delete() -> impl Fn(
     Request,
     Next,

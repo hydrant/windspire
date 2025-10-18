@@ -38,7 +38,7 @@
 		aria-labelledby="drawer-title"
 	>
 		<!-- Drawer panel -->
-		<div class="fixed right-0 top-0 h-full w-full min-w-[30vw] max-w-md bg-white shadow-xl">
+		<div class="fixed top-0 right-0 h-full w-full max-w-md min-w-[30vw] bg-white shadow-xl">
 			<div class="flex h-full flex-col">
 				<!-- Header -->
 				<div class="border-b border-gray-200 px-6 py-4">
@@ -48,7 +48,7 @@
 						</h2>
 						<button
 							onclick={onCancel}
-							class="rounded-md text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+							class="rounded-md text-gray-400 hover:text-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
 						>
 							<span class="sr-only">Close</span>
 							<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -122,14 +122,14 @@
 						<button
 							type="button"
 							onclick={onCancel}
-							class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+							class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
 						>
 							{cancelText}
 						</button>
 						<button
 							type="button"
 							onclick={onConfirm}
-							class="rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 {confirmButtonClass}"
+							class="rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm focus:ring-2 focus:ring-offset-2 focus:outline-none {confirmButtonClass}"
 						>
 							{confirmText}
 						</button>

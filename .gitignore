@@ -2,3 +2,10 @@
 .DS_Store
 .env
 
+**/node_modules
+
+# Build outputs
+windspire_frontend_svelte_csr/dist/
+**/dist/
+
+infrastructure/main.json

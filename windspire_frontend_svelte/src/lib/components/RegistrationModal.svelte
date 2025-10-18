@@ -103,9 +103,9 @@
 				const errorText = await response.text();
 				throw new Error(`Backend registration failed: ${response.status} ${errorText}`);
 			}
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error('Registration error:', err);
-			error = err.message || 'Registration failed. Please try again.';
+			error = err instanceof Error ? err.message : 'Registration failed. Please try again.';
 		} finally {
 			isLoading = false;
 		}
@@ -121,7 +121,7 @@
 {#if isOpen}
 	<!-- Modal backdrop -->
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-gray-600 bg-opacity-50"
+		class="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-gray-600"
 		onclick={handleBackdropClick}
 	>
 		<!-- Modal container -->
@@ -185,7 +185,7 @@
 							type="text"
 							id="displayName"
 							bind:value={displayName}
-							class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+							class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
 							placeholder="Enter your full name"
 							required
 						/>
@@ -197,7 +197,7 @@
 							type="email"
 							id="email"
 							bind:value={email}
-							class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+							class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
 							placeholder="Enter your email"
 							required
 						/>
@@ -209,7 +209,7 @@
 							type="password"
 							id="password"
 							bind:value={password}
-							class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+							class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
 							placeholder="Enter your password"
 							required
 						/>
@@ -223,7 +223,7 @@
 							type="password"
 							id="confirmPassword"
 							bind:value={confirmPassword}
-							class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+							class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
 							placeholder="Confirm your password"
 							required
 						/>
@@ -232,7 +232,7 @@
 					<button
 						type="submit"
 						disabled={isLoading}
-						class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-gray-400"
+						class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-400"
 					>
 						{#if isLoading}
 							<div class="flex items-center justify-center">

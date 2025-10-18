@@ -1,0 +1,158 @@
+# Infrastructure Build and Deployment
+#
+# Deploys Azure infrastructure resources using Bicep templates
+# - Only runs on tagged releases for controlled infrastructure changes
+# - Sets up Azure resources (Static Web Apps, PostgreSQL, Key Vault, etc.)
+# - Updates GitHub secrets with deployment outputs for dependent pipelines
+#
+# DEPENDENCIES: None - this is the foundation pipeline that other builds depend on
+
+name: Infrastructure Build
+
+on:
+  workflow_call:
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_CLIENT_SECRET:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
+      AZURE_RESOURCE_GROUP:
+        required: true
+      POSTGRES_ADMIN_LOGIN:
+        required: true
+      POSTGRES_ADMIN_PASSWORD:
+        required: true
+      FIREBASE_AUTH_DOMAIN:
+        required: true
+      FIREBASE_PROJECT_ID:
+        required: true
+      FIREBASE_PRIVATE_KEY:
+        required: true
+      FIREBASE_CLIENT_EMAIL:
+        required: true
+      JWT_SECRET:
+        required: true
+
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: string
+    outputs:
+      static-web-app-url:
+        description: 'URL of the deployed Static Web App'
+        value: ${{ jobs.deploy_infrastructure.outputs.static-web-app-url }}
+      postgres-server-name:
+        description: 'Name of the PostgreSQL server'
+        value: ${{ jobs.deploy_infrastructure.outputs.postgres-server-name }}
+      key-vault-name:
+        description: 'Name of the Key Vault'
+        value: ${{ jobs.deploy_infrastructure.outputs.key-vault-name }}
+      function-app-name:
+        description: 'Name of the Function App'
+        value: ${{ jobs.deploy_infrastructure.outputs.function-app-name }}
+      deployment-token:
+        description: 'Static Web App deployment token'
+        value: ${{ jobs.deploy_infrastructure.outputs.deployment-token }}
+
+permissions:
+  id-token: write
+  contents: read
+  actions: write
+
+jobs:
+  deploy_infrastructure:
+    runs-on: ubuntu-latest
+    name: Deploy Infrastructure
+    environment: ${{ inputs.environment }}
+    outputs:
+      static-web-app-url: ${{ steps.deploy.outputs.staticWebAppUrl }}
+      postgres-server-name: ${{ steps.deploy.outputs.postgresServerName }}
+      key-vault-name: ${{ steps.deploy.outputs.keyVaultName }}
+      function-app-name: ${{ steps.deploy.outputs.functionAppName }}
+      deployment-token: ${{ steps.get-token.outputs.deployment-token }}
+    
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+
+    - name: Deploy Infrastructure with bicep-deploy
+      id: deploy
+      uses: azure/bicep-deploy@v2
+      with:
+        type: deployment
+        operation: create
+        scope: resourceGroup
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        resource-group-name: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        name: windspire-infrastructure-${{ github.run_id }}
+        parameters-file: infrastructure/main.bicepparam
+        parameters: |
+          {
+            "environment": "${{ inputs.environment }}",
+            "postgresAdminLogin": "${{ secrets.POSTGRES_ADMIN_LOGIN }}",
+            "postgresAdminPassword": "${{ secrets.POSTGRES_ADMIN_PASSWORD }}",
+            "firebaseProjectId": "${{ secrets.FIREBASE_PROJECT_ID }}",
+            "firebasePrivateKey": "${{ secrets.FIREBASE_PRIVATE_KEY }}",
+            "firebaseClientEmail": "${{ secrets.FIREBASE_CLIENT_EMAIL }}",
+            "jwtSecret": "${{ secrets.JWT_SECRET }}"
+          }
+
+    - name: Configure post-deployment settings
+      run: |
+        echo "🔧 Configuring CORS and app settings after deployment..."
+        
+        # Get resource outputs
+        STATIC_WEB_APP_HOSTNAME="${{ steps.deploy.outputs.staticWebAppUrl }}"
+        FUNCTION_APP_NAME="${{ steps.deploy.outputs.functionAppName }}"
+        KEY_VAULT_NAME="${{ steps.deploy.outputs.keyVaultName }}"
+        
+        # Configure Function App CORS to point to Static Web App
+        echo "Setting Function App CORS to: $STATIC_WEB_APP_HOSTNAME"
+        az functionapp cors add \
+          --name "$FUNCTION_APP_NAME" \
+          --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+          --allowed-origins "$STATIC_WEB_APP_HOSTNAME"
+        
+        # Remove the wildcard CORS entry
+        az functionapp cors remove \
+          --name "$FUNCTION_APP_NAME" \
+          --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+          --allowed-origins "*" || echo "Wildcard CORS not found or already removed"
+        
+        echo "✅ Post-deployment configuration completed"
+
+    - name: Get Static Web App Deployment Token
+      id: get-token
+      run: |
+        # Get the deployment token using Azure CLI
+        DEPLOYMENT_TOKEN=$(az staticwebapp secrets list \
+          --name "${{ steps.deploy.outputs.staticWebAppName }}" \
+          --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+          --query "properties.apiKey" \
+          --output tsv)
+        echo "deployment-token=$DEPLOYMENT_TOKEN" >> $GITHUB_OUTPUT
+
+    - name: Output deployment results
+      run: |
+        echo "✅ Infrastructure deployed successfully!"
+        echo "🌐 Static Web App URL: ${{ steps.deploy.outputs.staticWebAppUrl }}"
+        echo "📊 PostgreSQL Server: ${{ steps.deploy.outputs.postgresServerName }}"
+        echo "🔐 Key Vault: ${{ steps.deploy.outputs.keyVaultName }}"
+        echo ""
+        echo "🚀 Ready for application deployments!"
+        echo "   - Frontend builds can now deploy to: ${{ steps.deploy.outputs.staticWebAppUrl }}"
+        echo "   - Backend builds can connect to PostgreSQL: ${{ steps.deploy.outputs.postgresServerName }}"
+        echo ""
+        echo "💡 Use job outputs in dependent workflows:"
+        echo "   - Static Web App URL: \${{ needs.infrastructure.outputs.static-web-app-url }}"
+        echo "   - Deployment Token: \${{ needs.infrastructure.outputs.deployment-token }}"

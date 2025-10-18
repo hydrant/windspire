@@ -9,6 +9,7 @@ use tower_http::cors::CorsLayer;
 
 use crate::application::{
     commands::{
+        create_user_boat_command::create_user_boat_command,
         delete_boat_command::delete_boat_command, delete_country_command::delete_country_command,
         delete_user_command::delete_user_command, insert_boat_command::insert_boat_command,
         insert_country_command::insert_country_command, insert_user_command::insert_user_command,
@@ -16,43 +17,53 @@ use crate::application::{
         update_user_command::update_user_command,
     },
     handlers::auth_handlers::{
-        firebase_auth_handler, logout_handler, me_handler,
-        refresh_token_handler,
+        firebase_auth_handler, logout_handler, me_handler, refresh_token_handler,
     },
-    middleware::{auth_middleware::jwt_auth_middleware, rbac_middleware::require_permission},
+    middleware::{
+        auth_middleware::jwt_auth_middleware,
+        rbac_middleware::{require_boats_write, require_permission},
+    },
     queries::{
         get_boats_query::get_boats_query, get_countries_query::get_countries_query,
         get_country_by_code_query::get_country_by_code_query,
-        get_country_by_id_query::get_country_by_id_query,
-        get_user_by_id_query::get_user_by_id_query, get_users_query::get_users_query,
+        get_country_by_id_query::get_country_by_id_query, get_my_boats_query::get_my_boats_query,
+        get_user_by_id_query::get_user_by_id_query, get_user_profile_query::get_user_profile_query,
+        get_users_query::get_users_query,
     },
 };
 
 use crate::application::state::AppState;
 
 pub fn create_router(app_state: AppState) -> Router {
-    // CORS configuration for frontend integration
+    // CORS configuration from environment/config
+    let cors_origins: Vec<axum::http::HeaderValue> = app_state
+        .config
+        .cors
+        .allowed_origins
+        .iter()
+        .filter_map(|origin| origin.parse().ok())
+        .collect();
+
+    let cors_methods: Vec<axum::http::Method> = app_state
+        .config
+        .cors
+        .allowed_methods
+        .iter()
+        .filter_map(|method| method.parse().ok())
+        .collect();
+
+    let cors_headers: Vec<axum::http::HeaderName> = app_state
+        .config
+        .cors
+        .allowed_headers
+        .iter()
+        .filter_map(|header| header.parse().ok())
+        .collect();
+
     let cors = CorsLayer::new()
-        .allow_origin([
-            "http://localhost:5173"
-                .parse::<axum::http::HeaderValue>()
-                .unwrap(),
-            "http://localhost:4173"
-                .parse::<axum::http::HeaderValue>()
-                .unwrap(),
-        ])
-        .allow_methods([
-            axum::http::Method::GET,
-            axum::http::Method::POST,
-            axum::http::Method::PUT,
-            axum::http::Method::DELETE,
-            axum::http::Method::OPTIONS,
-        ])
-        .allow_headers([
-            axum::http::header::AUTHORIZATION,
-            axum::http::header::CONTENT_TYPE,
-            axum::http::header::ACCEPT,
-        ])
+        .allow_origin(cors_origins)
+        .allow_methods(cors_methods)
+        .allow_headers(cors_headers)
         .allow_credentials(false);
 
     // Public routes (no authentication required)
@@ -67,7 +78,10 @@ pub fn create_router(app_state: AppState) -> Router {
         .route("/auth/me", get(me_handler))
         .route("/users", get(get_users_query))
         .route("/users/{user_id}", get(get_user_by_id_query))
+        .route("/users/{user_id}/profile", get(get_user_profile_query))
         .route("/boats", get(get_boats_query))
+        .route("/boats/my", get(get_my_boats_query)) // Get user's boats
+        .route("/boats/my", post(create_user_boat_command)) // User boat creation
         .route("/countries", get(get_countries_query))
         .route("/countries/{country_id}", get(get_country_by_id_query))
         .route(
@@ -95,9 +109,6 @@ pub fn create_router(app_state: AppState) -> Router {
         .route("/countries", post(insert_country_command))
         .route("/countries/{country_id}", put(update_country_command))
         .route("/countries/{country_id}", delete(delete_country_command))
-        .route("/boats", post(insert_boat_command))
-        .route("/boats/{boat_id}", put(update_boat_command))
-        .route("/boats/{boat_id}", delete(delete_boat_command))
         .layer(middleware::from_fn_with_state(
             app_state.clone(),
             require_permission(
@@ -111,11 +122,29 @@ pub fn create_router(app_state: AppState) -> Router {
             jwt_auth_middleware,
         ));
 
-    // Combine all routes
-    Router::new()
+    // Boat management routes (authentication + boat permissions required)
+    let boat_routes = Router::new()
+        .route("/boats", post(insert_boat_command))
+        .route("/boats/{boat_id}", put(update_boat_command))
+        .route("/boats/{boat_id}", delete(delete_boat_command))
+        .layer(middleware::from_fn_with_state(
+            app_state.clone(),
+            require_boats_write(),
+        ))
+        .layer(middleware::from_fn_with_state(
+            app_state.clone(),
+            jwt_auth_middleware,
+        ));
+
+    // Combine all routes with /api prefix for consistency between cargo run and func start
+    let api_routes = Router::new()
         .merge(public_routes)
         .merge(protected_routes)
         .merge(admin_routes)
+        .merge(boat_routes);
+
+    Router::new()
+        .nest("/api", api_routes)
         .layer(cors)
         .with_state(app_state)
 }

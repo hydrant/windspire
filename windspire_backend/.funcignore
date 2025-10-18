@@ -1,0 +1,15 @@
+# Azure Functions ignore file
+# This is a custom handler, not a traditional Azure Function
+
+*.md
+.git*
+.vscode
+__azurite_db*__
+__blobstorage__
+__queuestorage__
+local.settings.json
+test
+.cargo/
+src/
+Cargo.toml
+build.rs

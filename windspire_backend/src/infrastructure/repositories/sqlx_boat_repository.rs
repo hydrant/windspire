@@ -12,25 +12,6 @@ use crate::domain::{
 pub struct SqlxBoatRepository;
 
 impl BoatRepository for SqlxBoatRepository {
-    async fn get_by_id(&self, _pool: &PgPool, _id: Uuid) -> Result<Boat, Error> {
-        todo!()
-    }
-
-    async fn get_all(&self, pool: &PgPool) -> Result<Vec<Boat>, Error> {
-        let boats = sqlx::query_as!(
-            Boat,
-            r#"
-            SELECT id, name, brand, model, sail_number, country_id
-            FROM boats
-            ORDER BY name ASC
-            "#
-        )
-        .fetch_all(pool)
-        .await?;
-
-        Ok(boats)
-    }
-
     async fn get_paginated(
         &self,
         pool: &PgPool,
@@ -73,7 +54,7 @@ impl BoatRepository for SqlxBoatRepository {
 
     async fn insert(&self, pool: &PgPool, data: BoatCreate) -> Result<Boat, Error> {
         // Generate UUID v7 id
-        let ts = Timestamp::now(&NoContext);
+        let ts = Timestamp::now(NoContext);
         let id = Uuid::new_v7(ts);
         let user = sqlx::query_as!(
             Boat,

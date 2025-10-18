@@ -53,7 +53,7 @@ impl CountryRepository for SqlxCountryRepository {
         country_create: CountryCreate,
     ) -> Result<Country, Error> {
         // Generate UUID v7 id
-        let ts = Timestamp::now(&NoContext);
+        let ts = Timestamp::now(NoContext);
         let id = Uuid::new_v7(ts);
         let country = sqlx::query_as!(
             Country,
