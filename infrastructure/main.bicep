@@ -86,6 +86,7 @@ module containerAppEnv 'br/public:avm/res/app/managed-environment:0.11.3' = {
   params: {
     name: containerAppEnvName
     location: location
+    zoneRedundant: false // Zone redundancy requires VNET configuration
     workloadProfiles: [
       {
         workloadProfileType: 'Consumption'
