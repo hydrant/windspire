@@ -1,6 +1,7 @@
 # Multi-stage build for Rust backend
 # Stage 1: Builder
-FROM rust:1.83-alpine AS builder
+# Using Rust 1.90.0 which supports dependencies that require edition2024
+FROM rust:1.90.0-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache \
