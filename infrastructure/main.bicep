@@ -105,31 +105,42 @@ module containerApp 'br/public:avm/res/app/container-app:0.19.0' = {
       allowedHeaders: ['*']
       allowCredentials: false
     }
-    registries: [
-      {
-        server: 'ghcr.io'
-        username: ghcrUsername
-        passwordSecretRef: 'ghcr-token'
-      }
-    ]
-    secrets: [
-      {
-        name: 'ghcr-token'
-        value: ghcrToken
-      }
-      {
-        name: 'database-url'
-        value: 'postgresql://${postgresAdminLogin}:${postgresAdminPassword}@${postgresServer.outputs.fqdn}:5432/windspire?sslmode=require'
-      }
-      {
-        name: 'jwt-secret'
-        value: jwtSecret
-      }
-      {
-        name: 'firebase-private-key'
-        value: firebasePrivateKey
-      }
-    ]
+    // Only add registry authentication if token is provided (for private packages)
+    registries: !empty(ghcrToken)
+      ? [
+          {
+            server: 'ghcr.io'
+            username: ghcrUsername
+            passwordSecretRef: 'ghcr-token'
+          }
+        ]
+      : []
+    secrets: concat(
+      // Only add GHCR token if provided (for private packages)
+      !empty(ghcrToken)
+        ? [
+            {
+              name: 'ghcr-token'
+              value: ghcrToken
+            }
+          ]
+        : [],
+      // Always include these secrets
+      [
+        {
+          name: 'database-url'
+          value: 'postgresql://${postgresAdminLogin}:${postgresAdminPassword}@${postgresServer.outputs.fqdn}:5432/windspire?sslmode=require'
+        }
+        {
+          name: 'jwt-secret'
+          value: jwtSecret
+        }
+        {
+          name: 'firebase-private-key'
+          value: firebasePrivateKey
+        }
+      ]
+    )
     containers: [
       {
         name: 'windspire-backend'

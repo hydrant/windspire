@@ -67,6 +67,7 @@ jobs:
       FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
       POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      GHCR_PAT: ${{ secrets.GHCR_PAT }}
 
   # Step 3: Deploy backend to Container App (after infrastructure exists)
   backend:

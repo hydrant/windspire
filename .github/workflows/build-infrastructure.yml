@@ -36,6 +36,8 @@ on:
         required: true
       JWT_SECRET:
         required: true
+      GHCR_PAT:
+        required: true
 
     inputs:
       environment:
