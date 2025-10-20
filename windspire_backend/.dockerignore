@@ -1,0 +1,28 @@
+# Build artifacts
+target/
+*.rlib
+*.rmeta
+
+# IDE
+.vscode/
+.idea/
+
+# Testing
+.env
+.env.local
+
+# Documentation
+README.md
+docs/
+
+# Git
+.git/
+.gitignore
+
+# API testing
+*.http
+bruno/
+
+# Docker
+Dockerfile
+.dockerignore

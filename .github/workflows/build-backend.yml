@@ -1,21 +1,45 @@
-# Backend Build and Deployment
+# Backend Build and Deployment - Container Apps
 #
-# Builds and deploys the backend API to Azure Functions (Custom Handlers)
-# - Only runs on tagged releases for controlled deployments
-# - Focuses purely on building and deploying artifacts (no quality checks)
-# - Depends on infrastructure pipeline to provide deployment targets
+# This workflow builds the Rust backend as a Docker container and deploys it to Azure Container Apps.
+# 
+# Key steps:
+# 1. Run SQLx preparation to verify offline mode works
+# 2. Build Docker image using multi-stage Dockerfile (rust:alpine → scratch)
+# 3. Push image to Azure Container Registry
+# 4. Update Container App with new image revision
 #
-# DEPENDENCY: Requires build-infrastructure.yml to run first and set Azure resources
+# DEPENDENCIES: 
+# - Infrastructure pipeline must run first to create Container App and ACR
+#
+# Uses GitHub secrets (from Entra App Registration):
+# - AZURE_CLIENT_ID: Service principal client ID (see infrastructure/SETUP.md)
+# - AZURE_TENANT_ID: Azure AD tenant ID
+# - AZURE_SUBSCRIPTION_ID: Azure subscription ID
+# - AZURE_CLIENT_SECRET: Service principal secret
 
-name: Backend Build
+name: Backend Build (Container Apps)
 
 on:
   workflow_call:
     inputs:
       environment:
+        description: 'Environment to deploy to'
         required: true
         type: string
-      function-app-name:
+      container-app-name:
+        description: 'Name of the Container App to deploy to'
+        required: true
+        type: string
+      registry-name:
+        description: 'Name of the Azure Container Registry'
+        required: true
+        type: string
+      registry-login-server:
+        description: 'Login server URL for the Container Registry'
+        required: true
+        type: string
+      resource-group:
+        description: 'Azure resource group name'
         required: true
         type: string
     secrets:
@@ -30,51 +54,33 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-  # Build job - creates production artifacts
-  build_backend:
+  # Build and push Docker image
+  build_and_push:
     runs-on: ubuntu-latest
-    name: Build Backend
+    name: Build & Push Container Image
     environment: ${{ inputs.environment }}
     
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_USER: test_user
-          POSTGRES_DB: windspire
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-    
-    defaults:
-      run:
-        working-directory: windspire_backend
-    outputs:
-      environment: ${{ inputs.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      # Set up Rust with musl target for static linking
+      # Verify SQLx offline mode before building Docker image
+      # This ensures the SQLx query cache is up-to-date
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-unknown-linux-musl
 
-      # Install musl development tools for cross-compilation
-      - name: Install musl tools
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y musl-tools musl-dev pkg-config libssl-dev
+          sudo apt-get install -y musl-tools musl-dev postgresql-client
+          cargo install sqlx-cli --no-default-features --features postgres
 
-      # Cache dependencies for faster builds
-      - name: Cache dependencies
+      - name: Cache Cargo dependencies
         uses: actions/cache@v4
         with:
           path: |
@@ -83,166 +89,139 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             windspire_backend/target/
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('windspire_backend/**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('windspire_backend/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-release-
             ${{ runner.os }}-cargo-
 
-      # Install SQLx CLI and prepare query cache
-      - name: Install SQLx CLI
+      # Set up PostgreSQL for SQLx cache verification
+      - name: Start PostgreSQL
         run: |
-          # Check if sqlx is already installed, if not install it
-          if ! command -v sqlx &> /dev/null; then
-            cargo install sqlx-cli --no-default-features --features rustls,postgres
-          else
-            echo "SQLx CLI already installed: $(sqlx --version)"
-          fi
+          docker run -d \
+            --name postgres \
+            -e POSTGRES_PASSWORD=test_password \
+            -e POSTGRES_USER=test_user \
+            -e POSTGRES_DB=windspire \
+            -p 5432:5432 \
+            postgres:16
+          
+          # Wait for PostgreSQL to be ready
+          for i in {1..30}; do
+            if docker exec postgres pg_isready -U test_user; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting for PostgreSQL... ($i/30)"
+            sleep 2
+          done
 
-      # Run migrations and prepare SQLx query cache
-      - name: Prepare SQLx cache
+      # Verify SQLx offline mode works
+      - name: Verify SQLx offline mode
+        working-directory: windspire_backend
         run: |
-          # Set up database connection for cache generation
           export DATABASE_URL="postgresql://test_user:test_password@localhost:5432/windspire"
           
-          # Run migrations to set up database schema
+          # Run migrations
+          echo "🔄 Running database migrations..."
           sqlx migrate run
           
-          # Generate SQLx query cache
-          cargo sqlx prepare
+          # Verify SQLx query cache exists and is current
+          echo "🔍 Verifying SQLx query cache..."
+          cargo sqlx prepare --check
+          
+          echo "✅ SQLx offline mode verified - ready for Docker build"
         env:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/windspire
 
-      # Build for production with static linking
-      - name: Build for production
+      - name: Clean up PostgreSQL
+        if: always()
         run: |
-          cargo build --release --target x86_64-unknown-linux-musl
-          ls -la target/x86_64-unknown-linux-musl/release/
-        env:
-          # Use SQLx offline mode with prepared cache
-          SQLX_OFFLINE: true
-          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          docker stop postgres || true
+          docker rm postgres || true
 
-      # Prepare Azure Functions Custom Handler structure
-      - name: Prepare Custom Handler for Azure Functions
-        run: |
-          # Create Azure Functions custom handler structure
-          mkdir -p function_app
-          
-          # Copy the Rust binary
-          cp target/x86_64-unknown-linux-musl/release/windspire_backend function_app/
-          chmod +x function_app/windspire_backend
-          
-          # Create host.json for custom handler
-          cat > function_app/host.json << 'EOF'
-          {
-            "version": "2.0",
-            "customHandler": {
-              "description": {
-                "defaultExecutablePath": "windspire_backend",
-                "workingDirectory": "",
-                "arguments": []
-              },
-              "enableForwardingHttpRequest": true
-            },
-            "extensionBundle": {
-              "id": "Microsoft.Azure.Functions.ExtensionBundle",
-              "version": "[2.*, 3.0.0)"
-            }
-          }
-          EOF
-          
-          # Create function.json for HTTP trigger
-          mkdir -p function_app/api
-          cat > function_app/api/function.json << 'EOF'
-          {
-            "bindings": [
-              {
-                "authLevel": "anonymous",
-                "type": "httpTrigger",
-                "direction": "in",
-                "name": "req",
-                "methods": ["get", "post", "put", "delete", "patch", "options"],
-                "route": "{*restOfPath}"
-              },
-              {
-                "type": "http",
-                "direction": "out",
-                "name": "res"
-              }
-            ]
-          }
-          EOF
-          
-          # Copy .funcignore if it exists
-          if [ -f .funcignore ]; then
-            cp .funcignore function_app/
-          fi
-          
-          echo "📊 Custom Handler Structure:"
-          ls -la function_app/
-          echo ""
-          echo "🔧 host.json content:"
-          cat function_app/host.json
-          echo ""
-          echo "⚡ Function configuration:"
-          cat function_app/api/function.json
-          echo ""
-          echo "🚀 Ready for Azure Functions custom handler deployment"
-
-      # Upload build artifacts for deployment
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-function-${{ inputs.environment }}
-          path: windspire_backend/function_app/
-          retention-days: 7
-
-  # Deploy job - deploy custom handler to Azure Functions
-  deploy_backend:
-    needs: build_backend
-    runs-on: ubuntu-latest
-    name: Deploy Backend to Function App
-    environment: ${{ inputs.environment }}
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-function-${{ inputs.environment }}
-          path: ./function_app
-
+      # Azure Login for ACR access
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
 
-      - name: Deploy to Azure Functions
-        uses: Azure/functions-action@v1
-        with:
-          app-name: ${{ inputs.function-app-name }}
-          package: './function_app'
+      # Build and push using Azure Container Registry build
+      # This builds the image in Azure, avoiding local Docker complexity
+      - name: Build and push Docker image to ACR
+        working-directory: windspire_backend
+        run: |
+          echo "🏗️  Building Docker image in Azure Container Registry..."
+          echo "Registry: ${{ inputs.registry-name }}"
+          echo "Image: windspire-backend:${{ env.IMAGE_TAG }}"
           
-      # Verify deployment
+          az acr build \
+            --registry ${{ inputs.registry-name }} \
+            --image windspire-backend:${{ env.IMAGE_TAG }} \
+            --image windspire-backend:latest \
+            --file Dockerfile \
+            --platform linux/amd64 \
+            .
+          
+          echo "✅ Docker image built and pushed successfully"
+
+  # Deploy to Container App
+  deploy:
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    name: Deploy to Container App
+    environment: ${{ inputs.environment }}
+    
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+
+      # Update Container App with new image
+      - name: Update Container App
+        run: |
+          echo "🚀 Updating Container App with new image..."
+          echo "Container App: ${{ inputs.container-app-name }}"
+          echo "Image: ${{ inputs.registry-login-server }}/windspire-backend:${{ env.IMAGE_TAG }}"
+          
+          az containerapp update \
+            --name ${{ inputs.container-app-name }} \
+            --resource-group ${{ inputs.resource-group }} \
+            --image ${{ inputs.registry-login-server }}/windspire-backend:${{ env.IMAGE_TAG }}
+          
+          echo "✅ Container App updated successfully"
+
+      # Wait for deployment and verify health
       - name: Verify deployment
         run: |
-          echo "✅ Backend deployed successfully!"
-          echo "🌐 Environment: ${{ inputs.environment }}"
-          echo "🔧 Function App: ${{ inputs.function-app-name }}"
-          echo "📡 API Endpoint: https://${{ inputs.function-app-name }}.azurewebsites.net/api"
-          echo ""
-          echo "⏳ Waiting 45 seconds for Function App to fully start with new environment..."
-          sleep 45
-          echo ""
-          echo "🔍 Testing API health endpoint..."
+          echo "⏳ Waiting for Container App to start with new image..."
+          sleep 30
           
-          # Test health endpoint with detailed output
-          echo "Testing: https://${{ inputs.function-app-name }}.azurewebsites.net/api/health"
-          HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" https://${{ inputs.function-app-name }}.azurewebsites.net/api/health)
+          # Get Container App URL
+          CONTAINER_APP_URL=$(az containerapp show \
+            --name ${{ inputs.container-app-name }} \
+            --resource-group ${{ inputs.resource-group }} \
+            --query "properties.configuration.ingress.fqdn" \
+            --output tsv)
+          
+          echo "🌐 Container App URL: https://${CONTAINER_APP_URL}"
+          
+          # Test health endpoint
+          echo "🔍 Testing health endpoint..."
+          HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" "https://${CONTAINER_APP_URL}/health" || echo "000")
           
           if [ "$HTTP_STATUS" = "200" ]; then
             echo "✅ Health check passed (HTTP $HTTP_STATUS)"
             echo "🎉 Backend is healthy and responding!"
           else
-            echo "❌ Health check failed (HTTP $HTTP_STATUS)"
-            echo "ℹ️  This may be normal during initial deployment or if the backend needs time to start"
-            echo "� Next steps: Check the Function App logs in Azure Portal for detailed error information"
+            echo "⚠️  Health check returned HTTP $HTTP_STATUS"
+            echo "ℹ️  This may be normal if the app is still starting or scaling from zero"
+            echo "💡 Check Container App logs: az containerapp logs show --name ${{ inputs.container-app-name }} --resource-group ${{ inputs.resource-group }}"
           fi
+          
+          echo ""
+          echo "✅ Deployment Summary:"
+          echo "   - Environment: ${{ inputs.environment }}"
+          echo "   - Container App: ${{ inputs.container-app-name }}"
+          echo "   - Image: windspire-backend:${{ env.IMAGE_TAG }}"
+          echo "   - URL: https://${CONTAINER_APP_URL}"
+          echo "   - API Endpoint: https://${CONTAINER_APP_URL}/api"

@@ -61,7 +61,7 @@ jobs:
       POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
-  # Step 2: Build backend artifacts (parallel with frontend after infrastructure)
+  # Step 2: Build backend Docker image and deploy to Container App (parallel with frontend after infrastructure)
   backend:
     needs: [determine_environment, infrastructure]
     uses: ./.github/workflows/build-backend.yml
@@ -72,7 +72,10 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}    
     with:
       environment: ${{ needs.determine_environment.outputs.env_name }}
-      function-app-name: ${{ needs.infrastructure.outputs.function-app-name }}
+      container-app-name: ${{ needs.infrastructure.outputs.container-app-name }}
+      registry-name: ${{ needs.infrastructure.outputs.registry-name }}
+      registry-login-server: ${{ needs.infrastructure.outputs.registry-login-server }}
+      resource-group: ${{ secrets.AZURE_RESOURCE_GROUP }}
 
   # Step 3: Deploy frontend (parallel with backend after infrastructure)
   frontend:
@@ -90,7 +93,7 @@ jobs:
       environment: ${{ needs.determine_environment.outputs.env_name }}
       static-web-app-url: ${{ needs.infrastructure.outputs.static-web-app-url }}
       deployment-token: ${{ needs.infrastructure.outputs.deployment-token }}
-      function-app-name: ${{ needs.infrastructure.outputs.function-app-name }}
+      container-app-url: ${{ needs.infrastructure.outputs.container-app-url }}
 
   # Step 4: Final verification and summary
   summary:
@@ -104,15 +107,16 @@ jobs:
           echo ""
           echo "📊 Infrastructure:"
           echo "   - Static Web App: ${{ needs.infrastructure.outputs.static-web-app-url }}"
-          echo "   - Function App: ${{ needs.infrastructure.outputs.function-app-name }}"
+          echo "   - Container App: ${{ needs.infrastructure.outputs.container-app-name }}"
+          echo "   - Container Registry: ${{ needs.infrastructure.outputs.registry-login-server }}"
           echo "   - PostgreSQL: ${{ needs.infrastructure.outputs.postgres-server-name }}"
           echo "   - Key Vault: ${{ needs.infrastructure.outputs.key-vault-name }}"
           echo ""
           echo "🚀 Application is live and ready!"
           echo "   - Frontend: ${{ needs.infrastructure.outputs.static-web-app-url }}"
-          echo "   - Backend API: https://${{ needs.infrastructure.outputs.function-app-name }}.azurewebsites.net/api"
+          echo "   - Backend API: ${{ needs.infrastructure.outputs.container-app-url }}"
           echo ""
           echo "📦 Deployment included:"
           echo "   ✅ Frontend (Svelte) deployed to Static Web App"
-          echo "   ✅ Backend (Rust) deployed to Function App with custom handlers"
+          echo "   ✅ Backend (Rust Docker) deployed to Container Apps"
           echo "   ✅ Database migrations handled by application startup"

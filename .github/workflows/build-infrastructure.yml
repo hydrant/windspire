@@ -53,9 +53,18 @@ on:
       key-vault-name:
         description: 'Name of the Key Vault'
         value: ${{ jobs.deploy_infrastructure.outputs.key-vault-name }}
-      function-app-name:
-        description: 'Name of the Function App'
-        value: ${{ jobs.deploy_infrastructure.outputs.function-app-name }}
+      container-app-name:
+        description: 'Name of the Container App'
+        value: ${{ jobs.deploy_infrastructure.outputs.container-app-name }}
+      container-app-url:
+        description: 'URL of the Container App'
+        value: ${{ jobs.deploy_infrastructure.outputs.container-app-url }}
+      registry-name:
+        description: 'Name of the Azure Container Registry'
+        value: ${{ jobs.deploy_infrastructure.outputs.registry-name }}
+      registry-login-server:
+        description: 'Login server URL for the Container Registry'
+        value: ${{ jobs.deploy_infrastructure.outputs.registry-login-server }}
       deployment-token:
         description: 'Static Web App deployment token'
         value: ${{ jobs.deploy_infrastructure.outputs.deployment-token }}
@@ -74,7 +83,10 @@ jobs:
       static-web-app-url: ${{ steps.deploy.outputs.staticWebAppUrl }}
       postgres-server-name: ${{ steps.deploy.outputs.postgresServerName }}
       key-vault-name: ${{ steps.deploy.outputs.keyVaultName }}
-      function-app-name: ${{ steps.deploy.outputs.functionAppName }}
+      container-app-name: ${{ steps.deploy.outputs.containerAppName }}
+      container-app-url: ${{ steps.deploy.outputs.containerAppUrl }}
+      registry-name: ${{ steps.deploy.outputs.containerRegistryName }}
+      registry-login-server: ${{ steps.deploy.outputs.containerRegistryLoginServer }}
       deployment-token: ${{ steps.get-token.outputs.deployment-token }}
     
     steps:
@@ -109,26 +121,19 @@ jobs:
 
     - name: Configure post-deployment settings
       run: |
-        echo "🔧 Configuring CORS and app settings after deployment..."
+        echo "🔧 Post-deployment configuration..."
         
         # Get resource outputs
         STATIC_WEB_APP_HOSTNAME="${{ steps.deploy.outputs.staticWebAppUrl }}"
-        FUNCTION_APP_NAME="${{ steps.deploy.outputs.functionAppName }}"
+        CONTAINER_APP_NAME="${{ steps.deploy.outputs.containerAppName }}"
         KEY_VAULT_NAME="${{ steps.deploy.outputs.keyVaultName }}"
         
-        # Configure Function App CORS to point to Static Web App
-        echo "Setting Function App CORS to: $STATIC_WEB_APP_HOSTNAME"
-        az functionapp cors add \
-          --name "$FUNCTION_APP_NAME" \
-          --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
-          --allowed-origins "$STATIC_WEB_APP_HOSTNAME"
-        
-        # Remove the wildcard CORS entry
-        az functionapp cors remove \
-          --name "$FUNCTION_APP_NAME" \
-          --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
-          --allowed-origins "*" || echo "Wildcard CORS not found or already removed"
-        
+        echo "✅ Infrastructure deployed successfully"
+        echo "   - Static Web App: $STATIC_WEB_APP_HOSTNAME"
+        echo "   - Container App: $CONTAINER_APP_NAME"
+        echo "   - Key Vault: $KEY_VAULT_NAME"
+        echo ""
+        echo "ℹ️  CORS is configured in main.bicep for the Container App"
         echo "✅ Post-deployment configuration completed"
 
     - name: Get Static Web App Deployment Token
@@ -146,13 +151,16 @@ jobs:
       run: |
         echo "✅ Infrastructure deployed successfully!"
         echo "🌐 Static Web App URL: ${{ steps.deploy.outputs.staticWebAppUrl }}"
-        echo "📊 PostgreSQL Server: ${{ steps.deploy.outputs.postgresServerName }}"
+        echo "� Container App: ${{ steps.deploy.outputs.containerAppName }}"
+        echo "📦 Container Registry: ${{ steps.deploy.outputs.registryLoginServer }}"
+        echo "�📊 PostgreSQL Server: ${{ steps.deploy.outputs.postgresServerName }}"
         echo "🔐 Key Vault: ${{ steps.deploy.outputs.keyVaultName }}"
         echo ""
         echo "🚀 Ready for application deployments!"
-        echo "   - Frontend builds can now deploy to: ${{ steps.deploy.outputs.staticWebAppUrl }}"
-        echo "   - Backend builds can connect to PostgreSQL: ${{ steps.deploy.outputs.postgresServerName }}"
+        echo "   - Frontend builds can deploy to: ${{ steps.deploy.outputs.staticWebAppUrl }}"
+        echo "   - Backend Docker images can be pushed to: ${{ steps.deploy.outputs.registryLoginServer }}"
+        echo "   - Backend deploys to Container App: ${{ steps.deploy.outputs.containerAppName }}"
         echo ""
         echo "💡 Use job outputs in dependent workflows:"
-        echo "   - Static Web App URL: \${{ needs.infrastructure.outputs.static-web-app-url }}"
-        echo "   - Deployment Token: \${{ needs.infrastructure.outputs.deployment-token }}"
+        echo "   - Container App: \${{ needs.infrastructure.outputs.container-app-name }}"
+        echo "   - Registry: \${{ needs.infrastructure.outputs.registry-login-server }}"

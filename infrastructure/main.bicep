@@ -49,108 +49,156 @@ var uniqueSuffix = uniqueString(resourceGroup().id)
 var staticWebAppName = '${appName}-${environment}-${uniqueSuffix}'
 var postgresServerName = 'ws-pg-${environment}-${take(uniqueSuffix, 12)}'
 var keyVaultName = 'ws-kv-${take(uniqueSuffix, 14)}'
-var functionAppName = '${appName}-api-${environment}-${take(uniqueSuffix, 8)}'
+var containerAppName = '${appName}-api-${environment}'
+var containerRegistryName = 'cr${toLower(take(uniqueSuffix, 12))}${toLower(environment)}'
+var logAnalyticsName = '${appName}-logs-${environment}-${take(uniqueSuffix, 8)}'
+var containerAppEnvName = '${appName}-env-${environment}'
 
-// App Service Plan for Function App - Basic B1 (supports custom handlers on Linux)
-module appServicePlan 'br/public:avm/res/web/serverfarm:0.5.0' = {
-  name: 'appServicePlan'
-  params: {
-    name: '${appName}-plan-${environment}-${take(uniqueSuffix, 8)}'
-    location: location
-    skuName: 'B1' // Basic B1 plan - supports Linux and custom handlers
-    reserved: true // Linux
-  }
-}
-
-// Storage Account for Function App
-module storageAccount 'br/public:avm/res/storage/storage-account:0.27.1' = {
-  name: 'storageAccount'
-  params: {
-    name: 'st${toLower(take(uniqueSuffix, 12))}${toLower(environment)}'
-    location: location
-    skuName: 'Standard_LRS'
-    publicNetworkAccess: 'Enabled'
-    networkAcls: {
-      defaultAction: 'Allow' // Allow all access for now, can be restricted later
-      bypass: 'AzureServices' // Allow Azure services to bypass network rules
-    }
-    blobServices: {
-      containers: [
-        {
-          name: 'deployments'
-          publicAccess: 'None'
-        }
-      ]
-    }
-  }
-}
-
-// Application Insights for Function App monitoring
-module applicationInsights 'br/public:avm/res/insights/component:0.4.2' = {
-  name: 'applicationInsights'
-  params: {
-    name: '${appName}-insights-${environment}-${take(uniqueSuffix, 8)}'
-    location: location
-    workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId
-  }
-}
-
-// Log Analytics Workspace for Application Insights
-module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.9.0' = {
+// Log Analytics Workspace (using AVM module)
+module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.12.0' = {
   name: 'logAnalyticsWorkspace'
   params: {
-    name: '${appName}-logs-${environment}-${take(uniqueSuffix, 8)}'
+    name: logAnalyticsName
     location: location
   }
 }
 
-// Function App (AVM) - Basic B1 with custom handler support
-module functionApp 'br/public:avm/res/web/site:0.19.3' = {
-  name: 'functionApp'
+// Azure Container Registry (using AVM module)
+module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.3' = {
+  name: 'containerRegistry'
   params: {
-    name: functionAppName
+    name: containerRegistryName
     location: location
-    kind: 'functionapp,linux'
-    serverFarmResourceId: appServicePlan.outputs.resourceId
-    managedIdentities: {
-      systemAssigned: true
-    }
-    siteConfig: {
-      alwaysOn: false // Set to false to test cold start times. NOTE: You're paying for B1 24/7 regardless - setting to true has no extra cost and eliminates cold starts
-      linuxFxVersion: 'DOCKER|mcr.microsoft.com/azure-functions/node:4-node18' // Base image for custom handler
-      appSettings: [
-        {
-          name: 'AzureWebJobsStorage'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.outputs.name};AccountKey=${storageAccount.outputs.primaryAccessKey};EndpointSuffix=${az.environment().suffixes.storage}'
-        }
-        {
-          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.outputs.name};AccountKey=${storageAccount.outputs.primaryAccessKey};EndpointSuffix=${az.environment().suffixes.storage}'
-        }
-        { name: 'WEBSITE_CONTENTSHARE', value: toLower(functionAppName) }
-        { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
-        { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'custom' }
-        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: applicationInsights.outputs.connectionString }
-        { name: 'APPINSIGHTS_INSTRUMENTATIONKEY', value: applicationInsights.outputs.instrumentationKey }
-        { name: 'FIREBASE_PROJECT_ID', value: firebaseProjectId }
-        { name: 'FIREBASE_CLIENT_EMAIL', value: firebaseClientEmail }
-        { name: 'FIREBASE_PRIVATE_KEY', value: firebasePrivateKey }
-        {
-          name: 'DATABASE_URL'
-          value: 'postgresql://${postgresAdminLogin}:${postgresAdminPassword}@${postgresServer.outputs.fqdn}:5432/windspire?sslmode=require&sslcert=&sslkey=&sslrootcert='
-        }
-        { name: 'RUST_LOG', value: 'info' }
-        { name: 'JWT_SECRET', value: jwtSecret }
-        { name: 'JWT_EXPIRATION_HOURS', value: jwtExpirationHours }
-        { name: 'JWT_ISSUER', value: jwtIssuer }
-        { name: 'CORS_ALLOWED_ORIGINS', value: '${corsAllowedOrigins},https://${staticWebApp.outputs.defaultHostname}' }
-      ]
-      cors: {
-        allowedOrigins: [
-          '*' // Temporary - will be configured properly after deployment
-        ]
-        supportCredentials: false
+    acrSku: 'Basic'
+    acrAdminUserEnabled: true
+  }
+}
+
+// Reference to ACR for listCredentials
+resource acrReference 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
+  name: containerRegistryName
+  dependsOn: [containerRegistry]
+}
+
+// Container Apps Environment (using AVM module)
+module containerAppEnv 'br/public:avm/res/app/managed-environment:0.11.3' = {
+  name: 'containerAppEnv'
+  params: {
+    name: containerAppEnvName
+    location: location
+    workloadProfiles: [
+      {
+        workloadProfileType: 'Consumption'
+        name: 'Consumption'
       }
+    ]
+  }
+}
+
+// Container App for Rust Backend (using AVM module)
+module containerApp 'br/public:avm/res/app/container-app:0.19.0' = {
+  name: 'containerApp'
+  params: {
+    name: containerAppName
+    location: location
+    environmentResourceId: containerAppEnv.outputs.resourceId
+    workloadProfileName: 'Consumption'
+    ingressExternal: true
+    ingressTargetPort: 8080
+    ingressTransport: 'http'
+    corsPolicy: {
+      allowedOrigins: split('${corsAllowedOrigins},https://${staticWebApp.outputs.defaultHostname}', ',')
+      allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
+      allowedHeaders: ['*']
+      allowCredentials: false
+    }
+    registries: [
+      {
+        server: containerRegistry.outputs.loginServer
+        username: containerRegistry.outputs.name
+        passwordSecretRef: 'registry-password'
+      }
+    ]
+    secrets: [
+      {
+        name: 'registry-password'
+        value: acrReference.listCredentials().passwords[0].value
+      }
+      {
+        name: 'database-url'
+        value: 'postgresql://${postgresAdminLogin}:${postgresAdminPassword}@${postgresServer.outputs.fqdn}:5432/windspire?sslmode=require'
+      }
+      {
+        name: 'jwt-secret'
+        value: jwtSecret
+      }
+      {
+        name: 'firebase-private-key'
+        value: firebasePrivateKey
+      }
+    ]
+    containers: [
+      {
+        name: 'windspire-backend'
+        // Placeholder image - will be updated after first push
+        image: '${containerRegistry.outputs.loginServer}/windspire-backend:latest'
+        resources: {
+          cpu: json('0.5')
+          memory: '1Gi'
+        }
+        env: [
+          {
+            name: 'RUST_LOG'
+            value: 'info'
+          }
+          {
+            name: 'DATABASE_URL'
+            secretRef: 'database-url'
+          }
+          {
+            name: 'JWT_SECRET'
+            secretRef: 'jwt-secret'
+          }
+          {
+            name: 'JWT_EXPIRATION_HOURS'
+            value: jwtExpirationHours
+          }
+          {
+            name: 'JWT_ISSUER'
+            value: jwtIssuer
+          }
+          {
+            name: 'CORS_ALLOWED_ORIGINS'
+            value: '${corsAllowedOrigins},https://${staticWebApp.outputs.defaultHostname}'
+          }
+          {
+            name: 'FIREBASE_PROJECT_ID'
+            value: firebaseProjectId
+          }
+          {
+            name: 'FIREBASE_CLIENT_EMAIL'
+            value: firebaseClientEmail
+          }
+          {
+            name: 'FIREBASE_PRIVATE_KEY'
+            secretRef: 'firebase-private-key'
+          }
+        ]
+      }
+    ]
+    scaleSettings: {
+      minReplicas: 0 // SCALE TO ZERO! 🎉
+      maxReplicas: 10
+      rules: [
+        {
+          name: 'http-scaling'
+          http: {
+            metadata: {
+              concurrentRequests: '10'
+            }
+          }
+        }
+      ]
     }
   }
 }
@@ -236,26 +284,13 @@ module keyVault 'br/public:avm/res/key-vault/vault:0.13.3' = {
   }
 }
 
-// Raw role assignment resource to ensure we get the correct managed identity principal
-resource functionAppStorageRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(subscription().id, resourceGroup().id, functionAppName, 'storage-rbac')
-  properties: {
-    principalId: functionApp.outputs.systemAssignedMIPrincipalId!
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
-    ) // Storage Blob Data Owner
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Add Function App output
-output functionAppName string = functionApp.outputs.name
-
 // Outputs
+output containerAppName string = containerApp.outputs.name
+output containerAppUrl string = 'https://${containerApp.outputs.fqdn}'
+output containerRegistryLoginServer string = containerRegistry.outputs.loginServer
+output containerRegistryName string = containerRegistry.outputs.name
+output postgresServerName string = postgresServer.outputs.name
+output postgresServerFqdn string = postgresServer.outputs.fqdn
 output staticWebAppUrl string = 'https://${staticWebApp.outputs.defaultHostname}'
 output staticWebAppName string = staticWebApp.outputs.name
-output postgresServerName string = postgresServer.outputs.name
 output keyVaultName string = keyVault.outputs.name
-output applicationInsightsName string = applicationInsights.outputs.name
-output applicationInsightsInstrumentationKey string = applicationInsights.outputs.instrumentationKey
