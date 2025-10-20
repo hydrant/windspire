@@ -38,10 +38,6 @@ on:
         description: 'Login server URL for the Container Registry'
         required: true
         type: string
-      resource-group:
-        description: 'Azure resource group name'
-        required: true
-        type: string
     secrets:
       AZURE_CLIENT_ID:
         required: true
