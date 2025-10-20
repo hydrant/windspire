@@ -107,7 +107,6 @@ jobs:
       # Generate SQLx query cache for offline mode (if not committed)
       - name: Generate SQLx query cache
         working-directory: windspire_backend
-        continue-on-error: true  # Don't fail if .sqlx already exists
         run: |
           export DATABASE_URL="postgresql://test_user:test_password@localhost:5432/windspire"
           
@@ -129,6 +128,19 @@ jobs:
           echo "✅ SQLx query cache ready - proceeding with Docker build"
         env:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/windspire
+
+      - name: Verify SQLx cache exists
+        working-directory: windspire_backend
+        run: |
+          echo "📂 Checking .sqlx directory..."
+          if [ -d ".sqlx" ]; then
+            echo "✅ .sqlx directory found"
+            echo "📊 Query cache files:"
+            ls -lh .sqlx/
+          else
+            echo "❌ ERROR: .sqlx directory not found!"
+            exit 1
+          fi
 
       - name: Clean up PostgreSQL
         if: always()

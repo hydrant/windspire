@@ -20,6 +20,9 @@ COPY build.rs ./
 COPY src ./src
 COPY migrations ./migrations
 
+# Copy SQLx query cache for offline mode
+COPY .sqlx ./.sqlx
+
 # Build with SQLx offline mode and static linking
 ENV SQLX_OFFLINE=true
 ENV RUSTFLAGS="-C target-feature=-crt-static"
