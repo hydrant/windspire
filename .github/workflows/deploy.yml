@@ -41,9 +41,16 @@ jobs:
           echo "env_name=$ENV_NAME" >> $GITHUB_OUTPUT
 
 
-  # Step 1: Deploy infrastructure first
-  infrastructure:
+  # Step 1: Build backend Docker image FIRST (before infrastructure)
+  build_image:
     needs: determine_environment
+    uses: ./.github/workflows/build-backend-image.yml
+    with:
+      environment: ${{ needs.determine_environment.outputs.env_name }}
+
+  # Step 2: Deploy infrastructure (after image exists)
+  infrastructure:
+    needs: [determine_environment, build_image]
     uses: ./.github/workflows/build-infrastructure.yml
     with:
       environment: ${{ needs.determine_environment.outputs.env_name }}
@@ -61,7 +68,7 @@ jobs:
       POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
-  # Step 2: Build backend Docker image and deploy to Container App (parallel with frontend after infrastructure)
+  # Step 3: Deploy backend to Container App (after infrastructure exists)
   backend:
     needs: [determine_environment, infrastructure]
     uses: ./.github/workflows/build-backend.yml
