@@ -51,6 +51,8 @@ on:
         required: true
       AZURE_CLIENT_SECRET:
         required: true
+      AZURE_RESOURCE_GROUP:
+        required: true
 
 env:
   CARGO_TERM_COLOR: always
