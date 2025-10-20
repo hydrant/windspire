@@ -74,8 +74,6 @@ jobs:
     with:
       environment: ${{ needs.determine_environment.outputs.env_name }}
       container-app-name: ${{ needs.infrastructure.outputs.container-app-name }}
-      registry-name: ${{ needs.infrastructure.outputs.registry-name }}
-      registry-login-server: ${{ needs.infrastructure.outputs.registry-login-server }}
 
   # Step 3: Deploy frontend (parallel with backend after infrastructure)
   frontend:
@@ -108,7 +106,7 @@ jobs:
           echo "📊 Infrastructure:"
           echo "   - Static Web App: ${{ needs.infrastructure.outputs.static-web-app-url }}"
           echo "   - Container App: ${{ needs.infrastructure.outputs.container-app-name }}"
-          echo "   - Container Registry: ${{ needs.infrastructure.outputs.registry-login-server }}"
+          echo "   - Container Image: ghcr.io/${{ github.repository_owner }}/windspire-backend"
           echo "   - PostgreSQL: ${{ needs.infrastructure.outputs.postgres-server-name }}"
           echo "   - Key Vault: ${{ needs.infrastructure.outputs.key-vault-name }}"
           echo ""

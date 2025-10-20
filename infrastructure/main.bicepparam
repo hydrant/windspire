@@ -22,3 +22,8 @@ param jwtIssuer = 'windspire'
 
 // CORS Configuration
 param corsAllowedOrigins = 'http://localhost:3000,http://localhost:5173'
+
+// GitHub Container Registry Configuration
+param ghcrUsername = readEnvironmentVariable('GHCR_USERNAME', 'hydrant')
+param ghcrToken = readEnvironmentVariable('GHCR_TOKEN')
+param containerImage = 'ghcr.io/hydrant/windspire-backend:latest'

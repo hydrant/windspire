@@ -30,14 +30,6 @@ on:
         description: 'Name of the Container App to deploy to'
         required: true
         type: string
-      registry-name:
-        description: 'Name of the Azure Container Registry'
-        required: true
-        type: string
-      registry-login-server:
-        description: 'Login server URL for the Container Registry'
-        required: true
-        type: string
     secrets:
       AZURE_CLIENT_ID:
         required: true
@@ -136,30 +128,37 @@ jobs:
           docker stop postgres || true
           docker rm postgres || true
 
-      # Azure Login for ACR access
-      - name: Azure Login
-        uses: azure/login@v2
+      # Login to GitHub Container Registry
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build and push using Azure Container Registry build
-      # This builds the image in Azure, avoiding local Docker complexity
-      - name: Build and push Docker image to ACR
-        working-directory: windspire_backend
+      # Set up Docker Buildx for multi-platform builds
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build and push to GitHub Container Registry
+      - name: Build and push Docker image to GHCR
+        uses: docker/build-push-action@v6
+        with:
+          context: ./windspire_backend
+          file: ./windspire_backend/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/windspire-backend:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ github.repository_owner }}/windspire-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Image pushed successfully
         run: |
-          echo "🏗️  Building Docker image in Azure Container Registry..."
-          echo "Registry: ${{ inputs.registry-name }}"
-          echo "Image: windspire-backend:${{ env.IMAGE_TAG }}"
-          
-          az acr build \
-            --registry ${{ inputs.registry-name }} \
-            --image windspire-backend:${{ env.IMAGE_TAG }} \
-            --image windspire-backend:latest \
-            --file Dockerfile \
-            --platform linux/amd64 \
-            .
-          
-          echo "✅ Docker image built and pushed successfully"
+          echo "✅ Docker image built and pushed to GitHub Container Registry"
+          echo "📦 Image: ghcr.io/${{ github.repository_owner }}/windspire-backend:${{ env.IMAGE_TAG }}"
+          echo "📦 Image: ghcr.io/${{ github.repository_owner }}/windspire-backend:latest"
 
   # Deploy to Container App
   deploy:
@@ -174,17 +173,17 @@ jobs:
         with:
           creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
 
-      # Update Container App with new image
+      # Update Container App with new image from GHCR
       - name: Update Container App
         run: |
-          echo "🚀 Updating Container App with new image..."
+          echo "🚀 Updating Container App with new image from GitHub Container Registry..."
           echo "Container App: ${{ inputs.container-app-name }}"
-          echo "Image: ${{ inputs.registry-login-server }}/windspire-backend:${{ env.IMAGE_TAG }}"
+          echo "Image: ghcr.io/${{ github.repository_owner }}/windspire-backend:${{ env.IMAGE_TAG }}"
           
           az containerapp update \
             --name ${{ inputs.container-app-name }} \
-            --resource-group ${{ inputs.resource-group }} \
-            --image ${{ inputs.registry-login-server }}/windspire-backend:${{ env.IMAGE_TAG }}
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --image ghcr.io/${{ github.repository_owner }}/windspire-backend:${{ env.IMAGE_TAG }}
           
           echo "✅ Container App updated successfully"
 
@@ -197,7 +196,7 @@ jobs:
           # Get Container App URL
           CONTAINER_APP_URL=$(az containerapp show \
             --name ${{ inputs.container-app-name }} \
-            --resource-group ${{ inputs.resource-group }} \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --query "properties.configuration.ingress.fqdn" \
             --output tsv)
           
@@ -213,13 +212,13 @@ jobs:
           else
             echo "⚠️  Health check returned HTTP $HTTP_STATUS"
             echo "ℹ️  This may be normal if the app is still starting or scaling from zero"
-            echo "💡 Check Container App logs: az containerapp logs show --name ${{ inputs.container-app-name }} --resource-group ${{ inputs.resource-group }}"
+            echo "💡 Check Container App logs: az containerapp logs show --name ${{ inputs.container-app-name }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}"
           fi
           
           echo ""
           echo "✅ Deployment Summary:"
           echo "   - Environment: ${{ inputs.environment }}"
           echo "   - Container App: ${{ inputs.container-app-name }}"
-          echo "   - Image: windspire-backend:${{ env.IMAGE_TAG }}"
+          echo "   - Image: ghcr.io/${{ github.repository_owner }}/windspire-backend:${{ env.IMAGE_TAG }}"
           echo "   - URL: https://${CONTAINER_APP_URL}"
           echo "   - API Endpoint: https://${CONTAINER_APP_URL}/api"

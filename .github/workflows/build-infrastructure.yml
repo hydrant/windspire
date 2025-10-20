@@ -59,12 +59,6 @@ on:
       container-app-url:
         description: 'URL of the Container App'
         value: ${{ jobs.deploy_infrastructure.outputs.container-app-url }}
-      registry-name:
-        description: 'Name of the Azure Container Registry'
-        value: ${{ jobs.deploy_infrastructure.outputs.registry-name }}
-      registry-login-server:
-        description: 'Login server URL for the Container Registry'
-        value: ${{ jobs.deploy_infrastructure.outputs.registry-login-server }}
       deployment-token:
         description: 'Static Web App deployment token'
         value: ${{ jobs.deploy_infrastructure.outputs.deployment-token }}
@@ -85,8 +79,6 @@ jobs:
       key-vault-name: ${{ steps.deploy.outputs.keyVaultName }}
       container-app-name: ${{ steps.deploy.outputs.containerAppName }}
       container-app-url: ${{ steps.deploy.outputs.containerAppUrl }}
-      registry-name: ${{ steps.deploy.outputs.containerRegistryName }}
-      registry-login-server: ${{ steps.deploy.outputs.containerRegistryLoginServer }}
       deployment-token: ${{ steps.get-token.outputs.deployment-token }}
     
     steps:
@@ -116,7 +108,10 @@ jobs:
             "firebaseProjectId": "${{ secrets.FIREBASE_PROJECT_ID }}",
             "firebasePrivateKey": "${{ secrets.FIREBASE_PRIVATE_KEY }}",
             "firebaseClientEmail": "${{ secrets.FIREBASE_CLIENT_EMAIL }}",
-            "jwtSecret": "${{ secrets.JWT_SECRET }}"
+            "jwtSecret": "${{ secrets.JWT_SECRET }}",
+            "ghcrUsername": "${{ github.repository_owner }}",
+            "ghcrToken": "${{ secrets.GITHUB_TOKEN }}",
+            "containerImage": "ghcr.io/${{ github.repository_owner }}/windspire-backend:latest"
           }
 
     - name: Configure post-deployment settings

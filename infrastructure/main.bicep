@@ -44,13 +44,22 @@ param jwtIssuer string = 'windspire'
 @description('CORS allowed origins (comma-separated)')
 param corsAllowedOrigins string = 'http://localhost:3000,http://localhost:5173'
 
+@description('GitHub Container Registry username (GitHub org/user)')
+param ghcrUsername string
+
+@description('GitHub Container Registry token (Personal Access Token with packages:read scope)')
+@secure()
+param ghcrToken string
+
+@description('Container image name (e.g., ghcr.io/hydrant/windspire-backend)')
+param containerImage string = 'ghcr.io/${toLower(ghcrUsername)}/windspire-backend:latest'
+
 // Variables
 var uniqueSuffix = uniqueString(resourceGroup().id)
 var staticWebAppName = '${appName}-${environment}-${uniqueSuffix}'
 var postgresServerName = 'ws-pg-${environment}-${take(uniqueSuffix, 12)}'
 var keyVaultName = 'ws-kv-${take(uniqueSuffix, 14)}'
 var containerAppName = '${appName}-api-${environment}'
-var containerRegistryName = 'cr${toLower(take(uniqueSuffix, 12))}${toLower(environment)}'
 var logAnalyticsName = '${appName}-logs-${environment}-${take(uniqueSuffix, 8)}'
 var containerAppEnvName = '${appName}-env-${environment}'
 
@@ -61,23 +70,6 @@ module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0
     name: logAnalyticsName
     location: location
   }
-}
-
-// Azure Container Registry (using AVM module)
-module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.3' = {
-  name: 'containerRegistry'
-  params: {
-    name: containerRegistryName
-    location: location
-    acrSku: 'Basic'
-    acrAdminUserEnabled: true
-  }
-}
-
-// Reference to ACR for listCredentials
-resource acrReference 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
-  name: containerRegistryName
-  dependsOn: [containerRegistry]
 }
 
 // Container Apps Environment (using AVM module)
@@ -115,15 +107,15 @@ module containerApp 'br/public:avm/res/app/container-app:0.19.0' = {
     }
     registries: [
       {
-        server: containerRegistry.outputs.loginServer
-        username: containerRegistry.outputs.name
-        passwordSecretRef: 'registry-password'
+        server: 'ghcr.io'
+        username: ghcrUsername
+        passwordSecretRef: 'ghcr-token'
       }
     ]
     secrets: [
       {
-        name: 'registry-password'
-        value: acrReference.listCredentials().passwords[0].value
+        name: 'ghcr-token'
+        value: ghcrToken
       }
       {
         name: 'database-url'
@@ -141,8 +133,8 @@ module containerApp 'br/public:avm/res/app/container-app:0.19.0' = {
     containers: [
       {
         name: 'windspire-backend'
-        // Placeholder image - will be updated after first push
-        image: '${containerRegistry.outputs.loginServer}/windspire-backend:latest'
+        // GitHub Container Registry image
+        image: containerImage
         resources: {
           cpu: json('0.5')
           memory: '1Gi'
@@ -288,8 +280,7 @@ module keyVault 'br/public:avm/res/key-vault/vault:0.13.3' = {
 // Outputs
 output containerAppName string = containerApp.outputs.name
 output containerAppUrl string = 'https://${containerApp.outputs.fqdn}'
-output containerRegistryLoginServer string = containerRegistry.outputs.loginServer
-output containerRegistryName string = containerRegistry.outputs.name
+output containerImage string = containerImage
 output postgresServerName string = postgresServer.outputs.name
 output postgresServerFqdn string = postgresServer.outputs.fqdn
 output staticWebAppUrl string = 'https://${staticWebApp.outputs.defaultHostname}'
