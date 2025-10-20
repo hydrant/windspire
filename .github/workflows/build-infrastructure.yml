@@ -110,7 +110,7 @@ jobs:
             "firebaseClientEmail": "${{ secrets.FIREBASE_CLIENT_EMAIL }}",
             "jwtSecret": "${{ secrets.JWT_SECRET }}",
             "ghcrUsername": "${{ github.repository_owner }}",
-            "ghcrToken": "${{ secrets.GITHUB_TOKEN }}",
+            "ghcrToken": "${{ secrets.GHCR_PAT }}",
             "containerImage": "ghcr.io/${{ github.repository_owner }}/windspire-backend:latest"
           }
 
