@@ -15,7 +15,7 @@ mod domain;
 mod infrastructure;
 
 #[tokio::main]
-async fn main() -> () {
+async fn main() {
     // Initialize tracing
     tracing_subscriber::fmt::init();
 

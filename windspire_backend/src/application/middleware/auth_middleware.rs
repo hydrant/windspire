@@ -76,15 +76,17 @@ pub async fn optional_jwt_auth_middleware(
     mut request: Request,
     next: Next,
 ) -> Response {
-    if let Some(auth_header) = headers.get("Authorization").and_then(|h| h.to_str().ok())
-        && let Some(token) = JwtService::extract_bearer_token(auth_header)
-        && let Ok(claims) = app_state.jwt_service.validate_token(token)
-    {
-        let auth_context = AuthContext {
-            user: claims_to_auth_user(&claims),
-            token: token.to_string(),
-        };
-        request.extensions_mut().insert(auth_context);
+    // Refactored to work with Rust 2021 (no let chains)
+    if let Some(auth_header) = headers.get("Authorization").and_then(|h| h.to_str().ok()) {
+        if let Some(token) = JwtService::extract_bearer_token(auth_header) {
+            if let Ok(claims) = app_state.jwt_service.validate_token(token) {
+                let auth_context = AuthContext {
+                    user: claims_to_auth_user(&claims),
+                    token: token.to_string(),
+                };
+                request.extensions_mut().insert(auth_context);
+            }
+        }
     }
 
     next.run(request).await
