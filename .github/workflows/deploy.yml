@@ -69,21 +69,7 @@ jobs:
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
       GHCR_PAT: ${{ secrets.GHCR_PAT }}
 
-  # Step 3: Deploy backend to Container App (after infrastructure exists)
-  backend:
-    needs: [determine_environment, infrastructure]
-    uses: ./.github/workflows/build-backend.yml
-    secrets:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
-    with:
-      environment: ${{ needs.determine_environment.outputs.env_name }}
-      container-app-name: ${{ needs.infrastructure.outputs.container-app-name }}
-
-  # Step 3: Deploy frontend (parallel with backend after infrastructure)
+  # Step 3: Deploy frontend (after infrastructure exists)
   frontend:
     needs: [determine_environment, infrastructure]
     uses: ./.github/workflows/build-frontend.yml
@@ -103,7 +89,7 @@ jobs:
 
   # Step 4: Final verification and summary
   summary:
-    needs: [infrastructure, backend, frontend]
+    needs: [infrastructure, frontend]
     runs-on: ubuntu-latest
     name: Deployment Summary
     steps:
