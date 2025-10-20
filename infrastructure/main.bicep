@@ -79,6 +79,7 @@ module containerAppEnv 'br/public:avm/res/app/managed-environment:0.11.3' = {
     name: containerAppEnvName
     location: location
     zoneRedundant: false // Zone redundancy requires VNET configuration
+    publicNetworkAccess: 'Enabled' // Enable public network access
     workloadProfiles: [
       {
         workloadProfileType: 'Consumption'
