@@ -2,7 +2,7 @@ using './main.bicep'
 
 param appName = 'windspire'
 param environment = 'dev'
-param location = 'norwayeast'
+param location = 'eastus2'
 
 // PostgreSQL Configuration
 param postgresAdminLogin = readEnvironmentVariable('POSTGRES_ADMIN_LOGIN', 'postgres')

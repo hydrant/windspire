@@ -10,7 +10,7 @@
 
 2. **Updated `infrastructure/main.bicepparam`**
    - Changed to use `readEnvironmentVariable()` for secrets
-   - Updated location to `norwayeast`
+   - Updated location to `eastus2`
    - Updated PostgreSQL version to `16`
 
 3. **Updated `infrastructure/deploy.sh`**
