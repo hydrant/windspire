@@ -21,7 +21,7 @@ on:
       deployment-token:
         required: true
         type: string
-      function-app-name:
+      container-app-url:
         required: true
         type: string
     secrets:
@@ -71,7 +71,7 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
-          VITE_API_BASE_URL: https://${{ inputs.function-app-name }}.azurewebsites.net/api
+          VITE_API_BASE_URL: ${{ inputs.container-app-url }}
           VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
@@ -123,6 +123,6 @@ jobs:
           echo "✅ Frontend deployed successfully!"
           echo "🌐 Environment: ${{ inputs.environment }}"
           echo "📦 Frontend URL: ${{ steps.deploy.outputs.static_web_app_url }}"
-          echo "🔧 Backend API: https://${{ inputs.function-app-name }}.azurewebsites.net/api"
+          echo "🔧 Backend API: ${{ inputs.container-app-url }}"
           echo ""
           echo "🚀 Frontend is now live and ready for users!"
