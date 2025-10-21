@@ -65,7 +65,8 @@ async fn main() {
             .unwrap_or("8080")
             .to_string()
     });
-    let bind_address = format!("127.0.0.1:{}", port);
+    // Bind to 0.0.0.0 to accept connections from container ingress
+    let bind_address = format!("0.0.0.0:{}", port);
 
     // Create Axum TCP listener
     let listener = TcpListener::bind(&bind_address)
