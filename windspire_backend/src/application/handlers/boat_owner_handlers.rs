@@ -3,10 +3,10 @@ use crate::domain::models::boat::Boat;
 use crate::domain::models::user::UserWithCountry;
 use crate::domain::repositories::boat_owner_repository::BoatOwnerRepository;
 use axum::{
-    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
+    Json,
 };
 use serde_json;
 use uuid::Uuid;

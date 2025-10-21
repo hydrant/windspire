@@ -2,8 +2,9 @@ use crate::application::handlers::boat_owner_handlers::{
     add_owner_to_boat, get_boats_for_user, get_owners_for_boat, remove_owner_from_boat,
 };
 use axum::{
-    Router, middleware,
+    middleware,
     routing::{delete, get, post, put},
+    Router,
 };
 use tower_http::cors::CorsLayer;
 

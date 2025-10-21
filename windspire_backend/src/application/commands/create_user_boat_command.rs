@@ -11,10 +11,10 @@ use crate::{
     infrastructure::repositories::sqlx_boat_repository::SqlxBoatRepository,
 };
 use axum::{
-    Extension,
     extract::{Json, State},
     http::StatusCode,
     response::IntoResponse,
+    Extension,
 };
 use serde_json::json;
 use validator::Validate;
