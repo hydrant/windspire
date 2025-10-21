@@ -13,6 +13,14 @@ if [ -d "windspire_backend" ]; then
     echo "🦀 Checking Rust backend..."
     cd windspire_backend
     
+    # Run cargo fmt check
+    echo "  📝 Checking code formatting..."
+    cargo fmt --all -- --check
+    if [ $? -ne 0 ]; then
+        echo "❌ Backend code is not formatted. Run 'cargo fmt --all' to fix formatting."
+        exit 1
+    fi
+    
     # Run cargo check
     cargo check
     if [ $? -ne 0 ]; then

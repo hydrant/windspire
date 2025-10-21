@@ -16,7 +16,7 @@ pub(crate) trait UserRepository {
     ) -> impl Future<Output = Result<User, Error>>;
 
     fn get_users(&self, pool: &PgPool)
-    -> impl Future<Output = Result<Vec<UserWithCountry>, Error>>;
+        -> impl Future<Output = Result<Vec<UserWithCountry>, Error>>;
 
     fn insert_user(
         &self,

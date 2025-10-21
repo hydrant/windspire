@@ -9,10 +9,10 @@ use crate::{
     infrastructure::repositories::sqlx_user_repository::SqlxUserRepository,
 };
 use axum::{
-    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
+    Json,
 };
 use serde_json::json;
 

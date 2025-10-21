@@ -5,7 +5,7 @@ use crate::{
     },
     domain::{models::auth::AuthContext, repositories::boat_owner_repository::BoatOwnerRepository},
 };
-use axum::{Extension, extract::State, http::StatusCode, response::IntoResponse};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Extension};
 use serde_json::json;
 
 pub async fn get_my_boats_query(
