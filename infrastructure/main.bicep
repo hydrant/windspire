@@ -21,6 +21,13 @@ param postgresSku string = 'Standard_B1ms'
 @description('PostgreSQL server version')
 param postgresVersion string = '15'
 
+@description('The SKU for Static Web App (Free or Standard)')
+@allowed([
+  'Free'
+  'Standard'
+])
+param staticWebAppSku string = 'Free'
+
 @description('Firebase project ID')
 param firebaseProjectId string
 
@@ -218,7 +225,7 @@ module staticWebApp 'br/public:avm/res/web/static-site:0.9.3' = {
   params: {
     name: staticWebAppName
     location: location
-    sku: 'Standard'
+    sku: staticWebAppSku
     managedIdentities: {
       systemAssigned: true
     }

@@ -10,6 +10,9 @@ param postgresAdminPassword = readEnvironmentVariable('POSTGRES_ADMIN_PASSWORD')
 param postgresSku = 'Standard_B1ms'
 param postgresVersion = '16'
 
+// Static Web App Configuration
+param staticWebAppSku = 'Free' // Options: 'Free' or 'Standard'
+
 // Firebase Configuration
 param firebaseProjectId = readEnvironmentVariable('FIREBASE_PROJECT_ID')
 param firebasePrivateKey = readEnvironmentVariable('FIREBASE_PRIVATE_KEY')
