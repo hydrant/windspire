@@ -1,4 +1,4 @@
-use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
+use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -68,16 +68,6 @@ pub struct FirebaseUserInfo {
     pub provider: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FirebasePublicKey {
-    pub kty: String,
-    pub alg: String,
-    pub r#use: String,
-    pub kid: String,
-    pub n: String,
-    pub e: String,
-}
-
 pub struct FirebaseService {
     project_id: String,
     client: Client,
@@ -100,14 +90,19 @@ impl FirebaseService {
 
         let kid = header.kid.ok_or(FirebaseError::InvalidToken)?;
 
-        // Get public keys from Google
-        let public_keys = self.get_firebase_public_keys().await?;
-        let public_key = public_keys.get(&kid).ok_or(FirebaseError::TokenValidation(
-            "Key ID not found".to_string(),
+        // Get public key certificates from Google
+        let certs = self.get_firebase_certificates().await?;
+        let cert_pem = certs.get(&kid).ok_or(FirebaseError::TokenValidation(
+            "Key ID not found in certificates".to_string(),
         ))?;
 
-        // Create RSA decoding key from the public key
-        let decoding_key = self.create_decoding_key(public_key)?;
+        // Create RSA decoding key from the PEM certificate
+        let decoding_key = DecodingKey::from_rsa_pem(cert_pem.as_bytes()).map_err(|e| {
+            FirebaseError::TokenValidation(format!(
+                "Failed to create decoding key from certificate: {}",
+                e
+            ))
+        })?;
 
         // Set up validation
         let mut validation = Validation::new(Algorithm::RS256);
@@ -139,44 +134,25 @@ impl FirebaseService {
         Ok(user_info)
     }
 
-    /// Fetch Firebase public keys from Google
-    async fn get_firebase_public_keys(
-        &self,
-    ) -> Result<HashMap<String, FirebasePublicKey>, FirebaseError> {
+    /// Fetch Firebase public key certificates from Google (PEM format)
+    async fn get_firebase_certificates(&self) -> Result<HashMap<String, String>, FirebaseError> {
         let url = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com";
 
         let response = self.client.get(url).send().await?;
 
         if !response.status().is_success() {
             return Err(FirebaseError::TokenValidation(format!(
-                "Failed to fetch public keys: HTTP {}",
+                "Failed to fetch certificates: HTTP {}",
                 response.status()
             )));
         }
 
-        // The response is a JSON object with certificate strings
-        let _certs: HashMap<String, String> = response.json().await.map_err(|e| {
+        // The response is a JSON object with kid -> PEM certificate mappings
+        let certs: HashMap<String, String> = response.json().await.map_err(|e| {
             FirebaseError::TokenValidation(format!("Failed to parse certificates: {}", e))
         })?;
 
-        // For this implementation, we'll use a simplified approach
-        // In production, you'd want to parse the X.509 certificates properly
-        // For now, we'll return an error indicating this needs proper implementation
-        Err(FirebaseError::TokenValidation(
-            "Certificate parsing not yet implemented. Use Firebase Admin SDK or implement X.509 certificate parsing.".to_string()
-        ))
-    }
-
-    /// Create RSA decoding key from Firebase public key
-    fn create_decoding_key(
-        &self,
-        _public_key: &FirebasePublicKey,
-    ) -> Result<DecodingKey, FirebaseError> {
-        // This is a placeholder - in a real implementation you'd convert the
-        // X.509 certificate to an RSA public key
-        Err(FirebaseError::TokenValidation(
-            "RSA key creation not yet implemented".to_string(),
-        ))
+        Ok(certs)
     }
 
     /// Simple token validation without cryptographic verification (for development/testing)
