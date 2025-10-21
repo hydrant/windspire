@@ -226,12 +226,12 @@ module staticWebApp 'br/public:avm/res/web/static-site:0.9.3' = {
     name: staticWebAppName
     location: location
     sku: staticWebAppSku
-    // Managed identities are only supported in Standard SKU
+    // Managed identities are only supported in Standard SKU, not Free
     managedIdentities: staticWebAppSku == 'Standard'
       ? {
           systemAssigned: true
         }
-      : null
+      : {}
     // Remove Key Vault references to break circular dependency
     // These will be configured later via app settings update
   }
