@@ -23,9 +23,8 @@ COPY migrations ./migrations
 # Copy SQLx query cache for offline mode
 COPY .sqlx ./.sqlx
 
-# Build with SQLx offline mode and static linking
+# Build with SQLx offline mode and full static linking
 ENV SQLX_OFFLINE=true
-ENV RUSTFLAGS="-C target-feature=-crt-static"
 
 RUN cargo build --release --target x86_64-unknown-linux-musl
 
