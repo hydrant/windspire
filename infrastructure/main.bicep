@@ -153,6 +153,10 @@ module containerApp 'br/public:avm/res/app/container-app:0.19.0' = {
         }
         env: [
           {
+            name: 'PORT'
+            value: '8080'
+          }
+          {
             name: 'RUST_LOG'
             value: 'info'
           }

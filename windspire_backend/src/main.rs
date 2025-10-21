@@ -56,8 +56,8 @@ async fn main() {
     // Create application state
     let app_state = AppState::new(db_pool, jwt_service, firebase_service, config.clone());
 
-    // Determine port for Azure Functions or local development
-    let port = std::env::var("FUNCTIONS_CUSTOMHANDLER_PORT").unwrap_or_else(|_| {
+    // Determine port: Check PORT env var (Azure Container Apps standard), or use config default
+    let port = std::env::var("PORT").unwrap_or_else(|_| {
         config
             .server_address
             .split(':')
@@ -73,11 +73,7 @@ async fn main() {
         .await
         .expect("Could not create a TCP listener");
 
-    println!(
-        "Listening on {} (Azure Functions mode: {})",
-        listener.local_addr().unwrap(),
-        std::env::var("FUNCTIONS_CUSTOMHANDLER_PORT").is_ok()
-    );
+    println!("Listening on {}", listener.local_addr().unwrap());
 
     let app = approuter::create_router(app_state);
 
