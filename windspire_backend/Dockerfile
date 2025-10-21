@@ -35,11 +35,11 @@ FROM scratch
 # Copy CA certificates for HTTPS
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-# Copy the binary (Cargo converts underscores to hyphens in binary names)
-COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/windspire-backend /windspire-backend
+# Copy the binary
+COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/windspire_backend /windspire_backend
 
 # Expose port
 EXPOSE 8080
 
 # Run the binary
-ENTRYPOINT ["/windspire-backend"]
+ENTRYPOINT ["/windspire_backend"]
