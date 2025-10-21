@@ -113,7 +113,7 @@ jobs:
             "jwtSecret": "${{ secrets.JWT_SECRET }}",
             "ghcrUsername": "${{ github.repository_owner }}",
             "ghcrToken": "${{ secrets.GHCR_PAT }}",
-            "containerImage": "ghcr.io/${{ github.repository_owner }}/windspire-backend:latest"
+            "containerImage": "ghcr.io/${{ github.repository_owner }}/windspire-backend:${{ github.sha }}"
           }
 
     - name: Configure post-deployment settings
