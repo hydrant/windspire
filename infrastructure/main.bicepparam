@@ -11,7 +11,7 @@ param postgresSku = 'Standard_B1ms'
 param postgresVersion = '16'
 
 // Static Web App Configuration
-param staticWebAppSku = 'Free' // Options: 'Free' or 'Standard'
+param staticWebAppSku = 'Free' // Options: 'Free' or 'Standard' (Free doesn't support managed identities)
 
 // Firebase Configuration
 param firebaseProjectId = readEnvironmentVariable('FIREBASE_PROJECT_ID')

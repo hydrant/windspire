@@ -63,7 +63,7 @@ param containerImage string = 'ghcr.io/${toLower(ghcrUsername)}/windspire-backen
 
 // Variables
 var uniqueSuffix = uniqueString(resourceGroup().id)
-var staticWebAppName = '${appName}-${environment}-${uniqueSuffix}'
+var staticWebAppName = 'stapp-${appName}-${environment}-${take(uniqueSuffix, 8)}'
 var postgresServerName = 'ws-pg-${environment}-${take(uniqueSuffix, 12)}'
 var keyVaultName = 'ws-kv-${take(uniqueSuffix, 14)}'
 var containerAppName = '${appName}-api-${environment}'
@@ -220,18 +220,14 @@ module containerApp 'br/public:avm/res/app/container-app:0.19.0' = {
 }
 
 // Static Web App (AVM)
+// Note: Free SKU does not support managed identities
 module staticWebApp 'br/public:avm/res/web/static-site:0.9.3' = {
   name: 'staticWebApp'
   params: {
     name: staticWebAppName
     location: location
     sku: staticWebAppSku
-    // Managed identities are only supported in Standard SKU, not Free
-    managedIdentities: staticWebAppSku == 'Standard'
-      ? {
-          systemAssigned: true
-        }
-      : {}
+    // Removed managed identities - not supported in Free SKU
     // Remove Key Vault references to break circular dependency
     // These will be configured later via app settings update
   }
