@@ -24,7 +24,7 @@ param jwtExpirationHours = '24'
 param jwtIssuer = 'windspire'
 
 // CORS Configuration
-param corsAllowedOrigins = 'http://localhost:3000,http://localhost:5173'
+param corsAllowedOrigins = 'http://localhost:3000,http://localhost:5173,https://windspire.hydrant.no'
 
 // GitHub Container Registry Configuration
 param ghcrUsername = readEnvironmentVariable('GHCR_USERNAME', 'hydrant')
