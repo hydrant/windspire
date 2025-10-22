@@ -3,18 +3,60 @@
 	import { boatsApi, type Boat } from '../api';
 	import { userStore } from '../stores/user';
 	import BoatDrawer from '../components/BoatDrawer.svelte';
+	import ConfirmationDrawer from '../components/ConfirmationDrawer.svelte';
 
 	let boats = $state<Boat[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let isBoatDrawerOpen = $state(false);
+	let selectedBoat = $state<Boat | null>(null);
+	let isConfirmationDrawerOpen = $state(false);
+	let boatToDelete = $state<Boat | null>(null);
+	let isDeleting = $state(false);
 
 	function openBoatModal() {
+		selectedBoat = null;
+		isBoatDrawerOpen = true;
+	}
+
+	function openEditModal(boat: Boat) {
+		selectedBoat = boat;
 		isBoatDrawerOpen = true;
 	}
 
 	function closeBoatModal() {
 		isBoatDrawerOpen = false;
+		selectedBoat = null;
+	}
+
+	function openDeleteConfirmation(boat: Boat) {
+		boatToDelete = boat;
+		isConfirmationDrawerOpen = true;
+	}
+
+	function closeDeleteConfirmation() {
+		isConfirmationDrawerOpen = false;
+		boatToDelete = null;
+	}
+
+	async function handleDeleteConfirm() {
+		if (!boatToDelete) return;
+
+		try {
+			isDeleting = true;
+			const boatId = boatToDelete.id;
+			await boatsApi.deleteBoat(boatId);
+
+			// Remove the deleted boat from the local list
+			boats = boats.filter((b) => b.id !== boatId);
+
+			closeDeleteConfirmation();
+		} catch (err) {
+			console.error('Failed to delete boat:', err);
+			error = err instanceof Error ? err.message : 'Failed to delete boat';
+		} finally {
+			isDeleting = false;
+		}
 	}
 
 	async function handleBoatCreated() {
@@ -163,8 +205,17 @@
 									View
 								</button>
 								{#if $userStore}
-									<button class="text-sm font-medium text-gray-600 hover:text-gray-800">
+									<button
+										onclick={() => openEditModal(boat)}
+										class="text-sm font-medium text-gray-600 hover:text-gray-800"
+									>
 										Edit
+									</button>
+									<button
+										onclick={() => openDeleteConfirmation(boat)}
+										class="text-sm font-medium text-red-600 hover:text-red-800"
+									>
+										Delete
 									</button>
 								{/if}
 							</div>
@@ -176,5 +227,22 @@
 	{/if}
 </div>
 
-<!-- Boat Creation Drawer -->
-<BoatDrawer isOpen={isBoatDrawerOpen} onClose={closeBoatModal} onBoatCreated={handleBoatCreated} />
+<!-- Boat Drawer (Create/Edit) -->
+<BoatDrawer
+	isOpen={isBoatDrawerOpen}
+	boat={selectedBoat}
+	onClose={closeBoatModal}
+	onBoatCreated={handleBoatCreated}
+/>
+
+<!-- Confirmation Drawer (Delete) -->
+<ConfirmationDrawer
+	isOpen={isConfirmationDrawerOpen}
+	title="Delete Boat"
+	message="Are you sure you want to delete {boatToDelete?.name}? This will remove the boat and all its associated data."
+	confirmText={isDeleting ? 'Deleting...' : 'Delete Boat'}
+	cancelText="Cancel"
+	confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+	onConfirm={handleDeleteConfirm}
+	onCancel={closeDeleteConfirmation}
+/>

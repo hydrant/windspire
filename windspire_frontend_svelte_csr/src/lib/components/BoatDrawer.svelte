@@ -1,15 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { boatsApi, countriesApi } from '../api';
-	import type { BoatCreate, Country } from '../api';
+	import type { Boat, BoatCreate, BoatUpdate, Country } from '../api';
 
 	type Props = {
 		isOpen: boolean;
+		boat?: Boat | null;
 		onClose: () => void;
 		onBoatCreated: () => void;
 	};
 
-	const { isOpen, onClose, onBoatCreated }: Props = $props();
+	const { isOpen, boat = null, onClose, onBoatCreated }: Props = $props();
+
+	// Determine if we're editing or creating
+	const isEditMode = $derived(!!boat);
 
 	let formData = $state<BoatCreate>({
 		name: '',
@@ -22,6 +26,28 @@
 	let countries = $state<Country[]>([]);
 	let loading = $state(false);
 	let error = $state<string | null>(null);
+
+	// Populate form when boat changes (for edit mode)
+	$effect(() => {
+		if (boat) {
+			formData = {
+				name: boat.name,
+				brand: boat.brand || '',
+				model: boat.model || '',
+				sailNumber: boat.sailNumber || '',
+				countryId: boat.countryId
+			};
+		} else {
+			// Reset form for create mode
+			formData = {
+				name: '',
+				brand: '',
+				model: '',
+				sailNumber: '',
+				countryId: ''
+			};
+		}
+	});
 
 	// Load countries on mount
 	onMount(async () => {
@@ -55,7 +81,7 @@
 
 		try {
 			// Clean up empty strings
-			const cleanedData: BoatCreate = {
+			const cleanedData: BoatCreate | BoatUpdate = {
 				name: formData.name.trim(),
 				brand: formData.brand?.trim() || undefined,
 				model: formData.model?.trim() || undefined,
@@ -63,10 +89,13 @@
 				countryId: formData.countryId
 			};
 
-			console.log('Creating boat with data:', cleanedData);
-			console.log('Auth token:', localStorage.getItem('windspire_token') ? 'present' : 'missing');
-
-			await boatsApi.createBoat(cleanedData);
+			if (isEditMode && boat) {
+				console.log('Updating boat with data:', cleanedData);
+				await boatsApi.updateBoat(boat.id, cleanedData as BoatUpdate);
+			} else {
+				console.log('Creating boat with data:', cleanedData);
+				await boatsApi.createBoat(cleanedData as BoatCreate);
+			}
 
 			// Reset form
 			formData = {
@@ -80,17 +109,18 @@
 			onBoatCreated();
 			onClose();
 		} catch (err) {
-			console.error('Boat creation error:', err);
+			const action = isEditMode ? 'update' : 'create';
+			console.error(`Boat ${action} error:`, err);
 			if (err instanceof Error) {
 				if (err.message.includes('403')) {
-					error = 'You do not have permission to create boats. Please check your authentication.';
+					error = `You do not have permission to ${action} boats. Please check your authentication.`;
 				} else if (err.message.includes('401')) {
 					error = 'Authentication required. Please log in again.';
 				} else {
 					error = err.message;
 				}
 			} else {
-				error = 'Failed to create boat';
+				error = `Failed to ${action} boat`;
 			}
 		} finally {
 			loading = false;
@@ -152,7 +182,9 @@
 					<div class="flex h-full flex-col">
 						<div class="bg-blue-600 px-4 py-6 sm:px-6">
 							<div class="flex items-center justify-between">
-								<h2 id="drawer-title" class="text-lg font-medium text-white">Add New Boat</h2>
+								<h2 id="drawer-title" class="text-lg font-medium text-white">
+									{isEditMode ? 'Edit Boat' : 'Add New Boat'}
+								</h2>
 								<div class="ml-3 flex h-7 items-center">
 									<button
 										onclick={handleCancel}
@@ -290,7 +322,11 @@
 										disabled={loading}
 										class="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-blue-300"
 									>
-										{loading ? 'Creating...' : 'Create Boat'}
+										{#if isEditMode}
+											{loading ? 'Updating...' : 'Update Boat'}
+										{:else}
+											{loading ? 'Creating...' : 'Create Boat'}
+										{/if}
 									</button>
 								</div>
 							</form>
